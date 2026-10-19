@@ -22,6 +22,16 @@
     <string name="remove_confirm_yes">Eliminar</string>
     <string name="remove_confirm_no">Cancelar</string>
 
+    <string name="tile_label">Estado</string>
+    <string name="tile_description">Cambia tu estado con un toque</string>
+    <string name="tile_remaining_format">%1$d min restantes</string>
+    <string name="complication_label">Mi estado</string>
+    <string name="complication_remaining_format">%1$d min</string>
+    <string name="short_free">Libre</string>
+    <string name="short_focus">Enfoque</string>
+    <string name="short_class">Clase</string>
+    <string name="short_call">Llamada</string>
+
     <string-array name="suggested_names">
         <item>Estudiando</item>
         <item>Reunión</item>
