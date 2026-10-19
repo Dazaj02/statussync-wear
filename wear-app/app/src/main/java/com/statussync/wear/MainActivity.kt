@@ -1,13 +1,12 @@
 package com.statussync.wear
 
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.statussync.wear.surface.vibrateTimerFinished
 import com.statussync.wear.ui.StatusSyncRoot
 import com.statussync.wear.ui.assistant.AssistantViewModel
 import com.statussync.wear.ui.group.GroupViewModel
@@ -51,13 +50,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             StatusSyncTheme {
-                StatusSyncRoot(viewModel = viewModel, groupViewModel = groupViewModel, assistantViewModel = assistantViewModel, onTimerFinished = ::vibrateTimerFinished)
+                StatusSyncRoot(viewModel = viewModel, groupViewModel = groupViewModel, assistantViewModel = assistantViewModel, onTimerFinished = { vibrateTimerFinished(this) })
             }
         }
-    }
-
-    private fun vibrateTimerFinished() {
-        val vibrator = getSystemService(Vibrator::class.java) ?: return
-        vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250, 120, 250), -1))
     }
 }

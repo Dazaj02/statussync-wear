@@ -1,7 +1,7 @@
 package com.statussync.wear.di
 
 import android.content.Context
-import com.statussync.wear.data.InMemoryStatusRepository
+import com.statussync.wear.data.SharedPrefsStatusRepository
 import com.statussync.wear.data.CalendarScheduleSource
 import com.statussync.wear.data.CompositeMotionSource
 import com.statussync.wear.data.CompositeScheduleSource
@@ -21,7 +21,6 @@ import java.time.Clock
 /** Inyección manual. En W6 se cambia el adaptador mock por el real sin tocar la UI. */
 class AppContainer(context: Context) {
     val clock: Clock = Clock.systemUTC()
-    val statusRepository: StatusRepository = InMemoryStatusRepository(clock)
     val groupRepository: GroupRepository = MockGroupRepository(clock)
     val simulatedInputs = SimulatedInputs(clock)
     val scheduleSource: ScheduleSource = CompositeScheduleSource(listOf(CalendarScheduleSource(context), simulatedInputs))
@@ -30,4 +29,9 @@ class AppContainer(context: Context) {
         SharedPrefsAssistantSettingsRepository(context.getSharedPreferences("statussync", Context.MODE_PRIVATE))
     val customStateRepository: CustomStateRepository =
         SharedPrefsCustomStateRepository(context.getSharedPreferences("statussync", Context.MODE_PRIVATE))
+    val statusRepository: StatusRepository = SharedPrefsStatusRepository(
+        prefs = context.getSharedPreferences("statussync", Context.MODE_PRIVATE),
+        clock = clock,
+        customStates = customStateRepository.states.value,
+    )
 }

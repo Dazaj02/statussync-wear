@@ -7,6 +7,7 @@ import androidx.wear.watchface.complications.datasource.ComplicationDataSourceUp
 import com.statussync.wear.di.AppContainer
 import com.statussync.wear.surface.StatusComplicationService
 import com.statussync.wear.surface.StatusTileService
+import com.statussync.wear.surface.TimerAlarm
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,6 +19,7 @@ import kotlinx.coroutines.launch
 class StatusSyncApp : Application() {
     val container: AppContainer by lazy { AppContainer(this) }
 
+    private val timerAlarm by lazy { TimerAlarm(this) }
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
@@ -27,7 +29,10 @@ class StatusSyncApp : Application() {
             container.statusRepository.status
                 .map { it.state to it.custom?.id to it.until }
                 .distinctUntilChanged()
-                .collect { refreshSurfaces() }
+                .collect { (_, until) ->
+                    refreshSurfaces()
+                    timerAlarm.schedule(until)
+                }
         }
     }
 
