@@ -27,6 +27,28 @@
     <string name="group_empty">Aún no hay compañeros</string>
     <string name="group_member_detail">%1$s · %2$d min</string>
 
+    <string name="action_assistant">Asistente IA</string>
+    <string name="assistant_title">Asistente IA</string>
+    <string name="assistant_privacy">Todo se procesa en tu reloj. Nada sale de él.</string>
+    <string name="assistant_calendar">Agenda</string>
+    <string name="assistant_calendar_hint">Según tus bloques</string>
+    <string name="assistant_motion">Movimiento</string>
+    <string name="assistant_motion_hint">Detecta cuándo llevas rato quieto</string>
+    <string name="assistant_auto">Auto-cambio</string>
+    <string name="assistant_auto_hint">Cambia solo y puedes deshacer</string>
+    <string name="assistant_simulate_title">Probar sin datos reales</string>
+    <string name="assistant_simulate_class">Simular clase</string>
+    <string name="assistant_simulate_still">Simular quietud</string>
+    <string name="suggestion_title">Sugerencia</string>
+    <string name="suggestion_switch_format">Pasar a %1$s · %2$d min</string>
+    <string name="suggestion_accept">Aceptar</string>
+    <string name="suggestion_dismiss">Ahora no</string>
+    <string name="reason_schedule_now">Tienes un bloque en tu agenda</string>
+    <string name="reason_schedule_soon">Tu agenda empieza pronto</string>
+    <string name="reason_stillness">Llevas un rato sin moverte</string>
+    <string name="auto_applied_format">Cambié a %1$s</string>
+    <string name="auto_undo">Deshacer</string>
+
     <string name="tile_label">Estado</string>
     <string name="tile_description">Cambia tu estado con un toque</string>
     <string name="tile_remaining_format">%1$d min restantes</string>

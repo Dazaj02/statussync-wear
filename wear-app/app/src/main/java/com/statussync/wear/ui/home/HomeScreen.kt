@@ -38,6 +38,8 @@ import androidx.wear.compose.material3.Text
 import com.statussync.wear.R
 import com.statussync.wear.domain.AvailabilityState
 import com.statussync.wear.domain.CustomState
+import com.statussync.wear.ui.assistant.AssistantUiState
+import com.statussync.wear.ui.assistant.assistantItems
 import com.statussync.wear.ui.format.formatClock
 import com.statussync.wear.ui.theme.SurfaceContainer
 import com.statussync.wear.ui.theme.color
@@ -54,6 +56,11 @@ fun HomeScreen(
     onAdd: () -> Unit,
     onRemove: () -> Unit,
     onGroup: () -> Unit,
+    assistant: AssistantUiState,
+    onAccept: () -> Unit,
+    onDismissSuggestion: () -> Unit,
+    onUndo: () -> Unit,
+    onAssistant: () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
 
@@ -63,6 +70,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         item { CurrentStatus(ui) }
+        assistantItems(assistant, onAccept, onDismissSuggestion, onUndo)
         items(AvailabilityState.entries.size) { index ->
             val state = AvailabilityState.entries[index]
             StateButton(
@@ -92,6 +100,7 @@ fun HomeScreen(
                 },
             )
         }
+        item { ActionButton(stringResource(R.string.action_assistant), R.drawable.ic_assistant, Color(0xFF7A4FD6), onAssistant) }
         item { ActionButton(stringResource(R.string.action_group), R.drawable.ic_group, Color(0xFF14B8A6), onGroup) }
         if (customStates.size < CustomState.MAX_COUNT) {
             item { ActionButton(stringResource(R.string.action_add_state), R.drawable.ic_add, Color(0xFF3B82F6), onAdd) }

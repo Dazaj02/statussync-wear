@@ -1,6 +1,18 @@
 package com.statussync.wear.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.delay
+import com.statussync.wear.ui.assistant.AssistantScreen
+import com.statussync.wear.ui.assistant.AssistantViewModel
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,17 +55,21 @@ private sealed interface Route {
     data class AddDuration(val name: String, val base: AvailabilityState, val colorArgb: Long) : Route
     data object Manage : Route
     data object Group : Route
+    data object Assistant : Route
     data class ConfirmRemove(val state: CustomState) : Route
 }
 
 private fun Route.parent(): Route = when (this) {
     Route.Home -> Route.Home
-    is Route.PickDuration, Route.AddName, Route.Manage, Route.Group -> Route.Home
+    is Route.PickDuration, Route.AddName, Route.Manage, Route.Group, Route.Assistant -> Route.Home
     is Route.AddBase -> Route.AddName
     is Route.AddColor -> Route.AddBase(name)
     is Route.AddDuration -> Route.AddColor(name, base)
     is Route.ConfirmRemove -> Route.Manage
 }
+
+private const val EVALUATE_EVERY_MILLIS = 30_000L
+private const val UNDO_WINDOW_MILLIS = 8_000L
 
 private val PALETTE = listOf(
     0xFF3B82F6 to R.string.color_blue,
@@ -67,8 +83,51 @@ private val PALETTE = listOf(
 private val DURATION_SETS = listOf(listOf(15, 30, 60), listOf(25, 50, 90), listOf(45, 60, 90))
 
 @Composable
-fun StatusSyncRoot(viewModel: StatusViewModel, groupViewModel: GroupViewModel, onTimerFinished: () -> Unit) {
+fun StatusSyncRoot(
+    viewModel: StatusViewModel,
+    groupViewModel: GroupViewModel,
+    assistantViewModel: AssistantViewModel,
+    onTimerFinished: () -> Unit,
+) {
     val ui = viewModel.uiState.collectAsStateWithLifecycle().value
+    val assistant = assistantViewModel.uiState.collectAsStateWithLifecycle().value
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // Permisos que el asistente pide solo al encender cada función.
+    var afterGrant by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) afterGrant?.invoke()
+        afterGrant = null
+    }
+    fun enableWithPermission(permission: String, enable: () -> Unit) {
+        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+            enable()
+        } else {
+            afterGrant = enable
+            permissionLauncher.launch(permission)
+        }
+    }
+
+    // El asistente solo revisa mientras la app está visible; al salir suelta los sensores.
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            try {
+                while (true) {
+                    assistantViewModel.evaluate()
+                    delay(EVALUATE_EVERY_MILLIS)
+                }
+            } finally {
+                assistantViewModel.pause()
+            }
+        }
+    }
+    LaunchedEffect(assistant.undo) {
+        if (assistant.undo != null) {
+            delay(UNDO_WINDOW_MILLIS)
+            assistantViewModel.clearUndo()
+        }
+    }
     val customStates = viewModel.customStates.collectAsStateWithLifecycle().value
     var route by remember { mutableStateOf<Route>(Route.Home) }
 
@@ -109,6 +168,26 @@ fun StatusSyncRoot(viewModel: StatusViewModel, groupViewModel: GroupViewModel, o
             onAdd = { route = Route.AddName },
             onRemove = { route = Route.Manage },
             onGroup = { route = Route.Group },
+            assistant = assistant,
+            onAccept = assistantViewModel::accept,
+            onDismissSuggestion = assistantViewModel::dismiss,
+            onUndo = assistantViewModel::undoAuto,
+            onAssistant = { route = Route.Assistant },
+        )
+
+        Route.Assistant -> AssistantScreen(
+            ui = assistant,
+            onCalendar = { on ->
+                if (on) enableWithPermission(Manifest.permission.READ_CALENDAR) { assistantViewModel.setCalendar(true) }
+                else assistantViewModel.setCalendar(false)
+            },
+            onMotion = { on ->
+                if (on) enableWithPermission(Manifest.permission.ACTIVITY_RECOGNITION) { assistantViewModel.setMotion(true) }
+                else assistantViewModel.setMotion(false)
+            },
+            onAuto = assistantViewModel::setAutoApply,
+            onSimulateClass = assistantViewModel::simulateClass,
+            onSimulateStillness = assistantViewModel::simulateStillness,
         )
 
         Route.Group -> GroupScreen(groupViewModel.uiState.collectAsStateWithLifecycle().value)
