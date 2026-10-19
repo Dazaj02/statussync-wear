@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo A "Anillo vivo": anillo abierto con los cuatro colores de estado y un punto central con check. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="100"
+    android:viewportHeight="100">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M50,50m-50,0a50,50 0,1 1,100 0a50,50 0,1 1,-100 0" />
+    <path
+        android:pathData="M50,50m-36,0a36,36 0,1 1,72 0a36,36 0,1 1,-72 0"
+        android:strokeColor="#1B1F24"
+        android:strokeWidth="10" />
+    <path
+        android:pathData="M50,14A36,36 0,1 1,14,50"
+        android:strokeWidth="10"
+        android:strokeLineCap="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:startX="14"
+                android:startY="14"
+                android:endX="86"
+                android:endY="86"
+                android:type="linear">
+                <item android:color="#2E9E5B" android:offset="0.0" />
+                <item android:color="#E0A100" android:offset="0.38" />
+                <item android:color="#D64545" android:offset="0.7" />
+                <item android:color="#7A4FD6" android:offset="1.0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#2E9E5B"
+        android:pathData="M50,50m-14,0a14,14 0,1 1,28 0a14,14 0,1 1,-28 0" />
+    <path
+        android:pathData="M43.5,50.5l4.5,4.5l8.5,-9"
+        android:strokeColor="#04140B"
+        android:strokeWidth="3.4"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
