@@ -22,6 +22,11 @@
     <string name="remove_confirm_yes">Eliminar</string>
     <string name="remove_confirm_no">Cancelar</string>
 
+    <string name="action_group">Mi grupo</string>
+    <string name="group_free_summary">%1$d libres de %2$d</string>
+    <string name="group_empty">Aún no hay compañeros</string>
+    <string name="group_member_detail">%1$s · %2$d min</string>
+
     <string name="tile_label">Estado</string>
     <string name="tile_description">Cambia tu estado con un toque</string>
     <string name="tile_remaining_format">%1$d min restantes</string>

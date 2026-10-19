@@ -16,6 +16,8 @@ import com.statussync.wear.domain.AvailabilityState
 import com.statussync.wear.domain.CustomState
 import com.statussync.wear.ui.common.Choice
 import com.statussync.wear.ui.common.ChoiceScreen
+import com.statussync.wear.ui.group.GroupScreen
+import com.statussync.wear.ui.group.GroupViewModel
 import com.statussync.wear.ui.home.DurationPickerScreen
 import com.statussync.wear.ui.home.HomeEvent
 import com.statussync.wear.ui.home.HomeScreen
@@ -40,12 +42,13 @@ private sealed interface Route {
     data class AddColor(val name: String, val base: AvailabilityState) : Route
     data class AddDuration(val name: String, val base: AvailabilityState, val colorArgb: Long) : Route
     data object Manage : Route
+    data object Group : Route
     data class ConfirmRemove(val state: CustomState) : Route
 }
 
 private fun Route.parent(): Route = when (this) {
     Route.Home -> Route.Home
-    is Route.PickDuration, Route.AddName, Route.Manage -> Route.Home
+    is Route.PickDuration, Route.AddName, Route.Manage, Route.Group -> Route.Home
     is Route.AddBase -> Route.AddName
     is Route.AddColor -> Route.AddBase(name)
     is Route.AddDuration -> Route.AddColor(name, base)
@@ -64,7 +67,7 @@ private val PALETTE = listOf(
 private val DURATION_SETS = listOf(listOf(15, 30, 60), listOf(25, 50, 90), listOf(45, 60, 90))
 
 @Composable
-fun StatusSyncRoot(viewModel: StatusViewModel, onTimerFinished: () -> Unit) {
+fun StatusSyncRoot(viewModel: StatusViewModel, groupViewModel: GroupViewModel, onTimerFinished: () -> Unit) {
     val ui = viewModel.uiState.collectAsStateWithLifecycle().value
     val customStates = viewModel.customStates.collectAsStateWithLifecycle().value
     var route by remember { mutableStateOf<Route>(Route.Home) }
@@ -105,7 +108,10 @@ fun StatusSyncRoot(viewModel: StatusViewModel, onTimerFinished: () -> Unit) {
             },
             onAdd = { route = Route.AddName },
             onRemove = { route = Route.Manage },
+            onGroup = { route = Route.Group },
         )
+
+        Route.Group -> GroupScreen(groupViewModel.uiState.collectAsStateWithLifecycle().value)
 
         is Route.PickDuration -> DurationPickerScreen(
             stateName = current.customName ?: current.baseLabelRes?.let { stringResource(it) }.orEmpty(),
