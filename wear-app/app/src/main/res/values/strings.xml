@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StatusSync</string>
+    <string name="state_free">Libre</string>
+    <string name="state_focus">En Enfoque</string>
+    <string name="state_class">En Clase</string>
+    <string name="state_call">En llamada</string>
+    <string name="free_hint">Puedes interrumpirme</string>
+    <string name="remaining_format">%1$s restantes</string>
+    <string name="picker_title">¿Cuánto tiempo?</string>
+    <string name="picker_hint_cancel">Desliza para volver</string>
+
+    <string name="action_add_state">Añadir estado</string>
+    <string name="action_remove_state">Eliminar estado</string>
+    <string name="add_name_title">Nombre del estado</string>
+    <string name="add_base_title">Se comparte como</string>
+    <string name="add_base_hint">Tus compañeros verán este estado</string>
+    <string name="add_color_title">Color</string>
+    <string name="add_duration_title">Duraciones</string>
+    <string name="remove_title">¿Cuál eliminar?</string>
+    <string name="remove_confirm_title">¿Eliminar «%1$s»?</string>
+    <string name="remove_confirm_yes">Eliminar</string>
+    <string name="remove_confirm_no">Cancelar</string>
+
+    <string-array name="suggested_names">
+        <item>Estudiando</item>
+        <item>Reunión</item>
+        <item>Almuerzo</item>
+        <item>Descanso</item>
+        <item>Gimnasio</item>
+        <item>Transporte</item>
+        <item>Examen</item>
+        <item>Trabajo en equipo</item>
+    </string-array>
+
+    <string name="color_blue">Azul</string>
+    <string name="color_teal">Turquesa</string>
+    <string name="color_pink">Rosa</string>
+    <string name="color_orange">Naranja</string>
+    <string name="color_lime">Lima</string>
+    <string name="color_gray">Gris</string>
+</resources>
