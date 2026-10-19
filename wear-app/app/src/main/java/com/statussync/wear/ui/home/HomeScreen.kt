@@ -92,12 +92,12 @@ fun HomeScreen(
                 },
             )
         }
-        item { ActionButton(stringResource(R.string.action_group), R.drawable.ic_group, onGroup) }
+        item { ActionButton(stringResource(R.string.action_group), R.drawable.ic_group, Color(0xFF14B8A6), onGroup) }
         if (customStates.size < CustomState.MAX_COUNT) {
-            item { ActionButton(stringResource(R.string.action_add_state), R.drawable.ic_add, onAdd) }
+            item { ActionButton(stringResource(R.string.action_add_state), R.drawable.ic_add, Color(0xFF3B82F6), onAdd) }
         }
         if (customStates.isNotEmpty()) {
-            item { ActionButton(stringResource(R.string.action_remove_state), R.drawable.ic_delete, onRemove) }
+            item { ActionButton(stringResource(R.string.action_remove_state), R.drawable.ic_delete, Color(0xFFD64545), onRemove) }
         }
     }
 }
@@ -194,20 +194,23 @@ private fun StateButton(
 }
 
 @Composable
-private fun ActionButton(label: String, @DrawableRes iconRes: Int, onClick: () -> Unit) {
+private fun ActionButton(label: String, @DrawableRes iconRes: Int, accent: Color, onClick: () -> Unit) {
     Button(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Transparent,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+            contentColor = MaterialTheme.colorScheme.onSurface,
         ),
         icon = {
-            Icon(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-            )
+            Box(Modifier.size(36.dp).background(accent, CircleShape), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = onColorFor(accent),
+                    modifier = Modifier.size(22.dp),
+                )
+            }
         },
         label = { Text(label) },
     )
