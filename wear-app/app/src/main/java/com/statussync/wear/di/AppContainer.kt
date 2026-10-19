@@ -2,8 +2,10 @@ package com.statussync.wear.di
 
 import android.content.Context
 import com.statussync.wear.data.InMemoryStatusRepository
+import com.statussync.wear.data.MockGroupRepository
 import com.statussync.wear.data.SharedPrefsCustomStateRepository
 import com.statussync.wear.domain.CustomStateRepository
+import com.statussync.wear.domain.GroupRepository
 import com.statussync.wear.domain.StatusRepository
 import java.time.Clock
 
@@ -11,6 +13,7 @@ import java.time.Clock
 class AppContainer(context: Context) {
     val clock: Clock = Clock.systemUTC()
     val statusRepository: StatusRepository = InMemoryStatusRepository(clock)
+    val groupRepository: GroupRepository = MockGroupRepository(clock)
     val customStateRepository: CustomStateRepository =
         SharedPrefsCustomStateRepository(context.getSharedPreferences("statussync", Context.MODE_PRIVATE))
 }

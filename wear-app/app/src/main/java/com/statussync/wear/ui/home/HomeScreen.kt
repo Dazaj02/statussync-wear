@@ -53,6 +53,7 @@ fun HomeScreen(
     onPickCustom: (CustomState) -> Unit,
     onAdd: () -> Unit,
     onRemove: () -> Unit,
+    onGroup: () -> Unit,
 ) {
     val haptics = LocalHapticFeedback.current
 
@@ -91,6 +92,7 @@ fun HomeScreen(
                 },
             )
         }
+        item { ActionButton(stringResource(R.string.action_group), R.drawable.ic_group, onGroup) }
         if (customStates.size < CustomState.MAX_COUNT) {
             item { ActionButton(stringResource(R.string.action_add_state), R.drawable.ic_add, onAdd) }
         }
