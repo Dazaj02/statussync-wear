@@ -21,6 +21,9 @@ enum class AvailabilityState(
 
     val hasTimer: Boolean get() = durationOptionsMin.isNotEmpty()
 
+    /** Duración al cambiar con un solo toque (Tile): la por defecto, o la primera opción. Null en Libre. */
+    val quickDurationMin: Int? get() = defaultDurationMin ?: durationOptionsMin.firstOrNull()
+
     companion object {
         fun fromWire(value: String): AvailabilityState? = entries.firstOrNull { it.wireName == value }
     }
