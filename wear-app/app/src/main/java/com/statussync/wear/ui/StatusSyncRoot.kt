@@ -30,6 +30,8 @@ import com.statussync.wear.domain.AvailabilityState
 import com.statussync.wear.domain.CustomState
 import com.statussync.wear.ui.common.Choice
 import com.statussync.wear.ui.common.ChoiceScreen
+import com.statussync.wear.data.SensorRecorder
+import com.statussync.wear.ui.lab.SensorLabScreen
 import com.statussync.wear.ui.group.GroupScreen
 import com.statussync.wear.ui.group.GroupViewModel
 import com.statussync.wear.ui.home.DurationPickerScreen
@@ -60,12 +62,15 @@ private sealed interface Route {
     data object Assistant : Route
     /** Selector de estado que abre el giro de muñeca. */
     data object PickState : Route
+    /** Herramienta de pruebas de sensores (no es parte del uso normal). */
+    data object SensorLab : Route
     data class ConfirmRemove(val state: CustomState) : Route
 }
 
 private fun Route.parent(): Route = when (this) {
     Route.Home -> Route.Home
     is Route.PickDuration, Route.AddName, Route.Manage, Route.Group, Route.Assistant, Route.PickState -> Route.Home
+    Route.SensorLab -> Route.Assistant
     is Route.AddBase -> Route.AddName
     is Route.AddColor -> Route.AddBase(name)
     is Route.AddDuration -> Route.AddColor(name, base)
@@ -135,6 +140,7 @@ fun StatusSyncRoot(
     }
     val customStates = viewModel.customStates.collectAsStateWithLifecycle().value
     var route by remember { mutableStateOf<Route>(Route.Home) }
+    val sensorRecorder = remember { SensorRecorder(context.applicationContext) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { if (it == HomeEvent.TimerFinished) onTimerFinished() }
@@ -221,7 +227,10 @@ fun StatusSyncRoot(
             onSimulateStillness = assistantViewModel::simulateStillness,
             onSimulateShake = assistantViewModel::simulateShake,
             onSimulateTwist = assistantViewModel::simulateTwist,
+            onSensorLab = { route = Route.SensorLab },
         )
+
+        Route.SensorLab -> SensorLabScreen(sensorRecorder)
 
         Route.PickState -> ChoiceScreen(
             title = stringResource(R.string.gesture_pick_title),

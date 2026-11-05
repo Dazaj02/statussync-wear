@@ -43,6 +43,7 @@ fun AssistantScreen(
     onSimulateStillness: () -> Unit,
     onSimulateShake: () -> Unit,
     onSimulateTwist: () -> Unit,
+    onSensorLab: () -> Unit,
 ) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -84,6 +85,7 @@ fun AssistantScreen(
         item { SimulateButton(stringResource(R.string.assistant_simulate_still), onSimulateStillness) }
         item { SimulateButton(stringResource(R.string.assistant_simulate_shake), onSimulateShake) }
         item { SimulateButton(stringResource(R.string.assistant_simulate_twist), onSimulateTwist) }
+        item { SimulateButton(stringResource(R.string.assistant_sensor_lab), onSensorLab) }
     }
 }
 
