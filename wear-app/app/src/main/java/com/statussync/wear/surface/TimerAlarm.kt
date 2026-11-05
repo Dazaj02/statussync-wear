@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -14,7 +15,14 @@ import java.time.Instant
 /** Vibración de "se acabó el bloque". La usan la app abierta y la alarma con la app cerrada. */
 fun vibrateTimerFinished(context: Context) {
     val vibrator = context.getSystemService(Vibrator::class.java) ?: return
-    vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250, 120, 250), -1))
+    val effect = VibrationEffect.createWaveform(longArrayOf(0, 250, 120, 250, 120, 250), -1)
+    // Con uso ALARMA Android deja vibrar aunque la app esté en segundo plano; sin él lo descarta ("ignored_background").
+    val alarmUsage = AudioAttributes.Builder()
+        .setUsage(AudioAttributes.USAGE_ALARM)
+        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+        .build()
+    @Suppress("DEPRECATION")
+    vibrator.vibrate(effect, alarmUsage)
 }
 
 /** Programa (o cancela) la alarma del sistema que avisa cuando vence el temporizador aunque la app esté cerrada. */
