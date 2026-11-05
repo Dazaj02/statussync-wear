@@ -41,6 +41,7 @@ class MainActivity : ComponentActivity() {
                     container.motionSource,
                     container.simulatedInputs,
                     container.clock,
+                    container.gestureSource,
                 )
             }
         }

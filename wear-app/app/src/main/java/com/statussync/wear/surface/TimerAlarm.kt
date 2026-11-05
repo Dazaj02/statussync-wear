@@ -53,3 +53,9 @@ class TimerEndReceiver : BroadcastReceiver() {
         if (due) vibrateTimerFinished(context)
     }
 }
+
+/** Vibración corta: "te entendí" tras un gesto de muñeca. */
+fun vibrateGestureRecognized(context: Context) {
+    val vibrator = context.getSystemService(Vibrator::class.java) ?: return
+    vibrator.vibrate(VibrationEffect.createOneShot(70, VibrationEffect.DEFAULT_AMPLITUDE))
+}

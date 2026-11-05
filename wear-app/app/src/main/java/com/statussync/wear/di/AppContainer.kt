@@ -9,6 +9,8 @@ import com.statussync.wear.data.MockGroupRepository
 import com.statussync.wear.data.SharedPrefsAssistantSettingsRepository
 import com.statussync.wear.data.SimulatedInputs
 import com.statussync.wear.data.StepCounterMotionSource
+import com.statussync.wear.data.GestureSensorSource
+import com.statussync.wear.domain.GestureSource
 import com.statussync.wear.domain.AssistantSettingsRepository
 import com.statussync.wear.domain.MotionSource
 import com.statussync.wear.domain.ScheduleSource
@@ -25,6 +27,7 @@ class AppContainer(context: Context) {
     val simulatedInputs = SimulatedInputs(clock)
     val scheduleSource: ScheduleSource = CompositeScheduleSource(listOf(CalendarScheduleSource(context), simulatedInputs))
     val motionSource: MotionSource = CompositeMotionSource(listOf(StepCounterMotionSource(context), simulatedInputs))
+    val gestureSource: GestureSource = GestureSensorSource(context)
     val assistantSettingsRepository: AssistantSettingsRepository =
         SharedPrefsAssistantSettingsRepository(context.getSharedPreferences("statussync", Context.MODE_PRIVATE))
     val customStateRepository: CustomStateRepository =

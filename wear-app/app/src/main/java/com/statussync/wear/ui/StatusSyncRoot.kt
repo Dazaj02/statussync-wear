@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
 import com.statussync.wear.ui.assistant.AssistantScreen
 import com.statussync.wear.ui.assistant.AssistantViewModel
+import com.statussync.wear.ui.assistant.GestureEvent
+import com.statussync.wear.surface.vibrateGestureRecognized
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -56,12 +58,14 @@ private sealed interface Route {
     data object Manage : Route
     data object Group : Route
     data object Assistant : Route
+    /** Selector de estado que abre el giro de muñeca. */
+    data object PickState : Route
     data class ConfirmRemove(val state: CustomState) : Route
 }
 
 private fun Route.parent(): Route = when (this) {
     Route.Home -> Route.Home
-    is Route.PickDuration, Route.AddName, Route.Manage, Route.Group, Route.Assistant -> Route.Home
+    is Route.PickDuration, Route.AddName, Route.Manage, Route.Group, Route.Assistant, Route.PickState -> Route.Home
     is Route.AddBase -> Route.AddName
     is Route.AddColor -> Route.AddBase(name)
     is Route.AddDuration -> Route.AddColor(name, base)
@@ -112,6 +116,7 @@ fun StatusSyncRoot(
     // El asistente solo revisa mientras la app está visible; al salir suelta los sensores.
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            assistantViewModel.resumeGestures()
             try {
                 while (true) {
                     assistantViewModel.evaluate()
@@ -137,6 +142,31 @@ fun StatusSyncRoot(
     BackHandler(enabled = route != Route.Home) { route = route.parent() }
 
     fun goHome() { route = Route.Home }
+
+    fun pickBase(state: AvailabilityState) {
+        if (!state.hasTimer) {
+            viewModel.select(state)
+            goHome()
+        } else {
+            route = Route.PickDuration(
+                baseLabelRes = state.labelRes,
+                customName = null,
+                color = state.color(),
+                optionsMin = state.durationOptionsMin,
+                onStart = { min -> viewModel.select(state, Duration.ofMinutes(min.toLong())); goHome() },
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        assistantViewModel.gestureEvents.collect { event ->
+            vibrateGestureRecognized(context)
+            when (event) {
+                GestureEvent.FocusStarted -> route = Route.Home
+                GestureEvent.OpenPicker -> route = Route.PickState
+            }
+        }
+    }
 
     when (val current = route) {
         Route.Home -> HomeScreen(
@@ -186,8 +216,19 @@ fun StatusSyncRoot(
                 else assistantViewModel.setMotion(false)
             },
             onAuto = assistantViewModel::setAutoApply,
+            onGestures = assistantViewModel::setGestures,
             onSimulateClass = assistantViewModel::simulateClass,
             onSimulateStillness = assistantViewModel::simulateStillness,
+            onSimulateShake = assistantViewModel::simulateShake,
+            onSimulateTwist = assistantViewModel::simulateTwist,
+        )
+
+        Route.PickState -> ChoiceScreen(
+            title = stringResource(R.string.gesture_pick_title),
+            choices = AvailabilityState.entries.map {
+                Choice(it.wireName, stringResource(it.labelRes), it.color(), onColorFor(it.color()))
+            },
+            onPick = { pickBase(AvailabilityState.fromWire(it.key) ?: AvailabilityState.Free) },
         )
 
         Route.Group -> GroupScreen(groupViewModel.uiState.collectAsStateWithLifecycle().value)

@@ -11,6 +11,7 @@ class SharedPrefsAssistantSettingsRepository(
         calendar = prefs.getBoolean(CALENDAR, false),
         motion = prefs.getBoolean(MOTION, false),
         autoApply = prefs.getBoolean(AUTO, false),
+        gestures = prefs.getBoolean(GESTURES, false),
     ),
 ) {
     override fun onChanged(settings: AssistantSettings) {
@@ -18,6 +19,7 @@ class SharedPrefsAssistantSettingsRepository(
             .putBoolean(CALENDAR, settings.calendar)
             .putBoolean(MOTION, settings.motion)
             .putBoolean(AUTO, settings.autoApply)
+            .putBoolean(GESTURES, settings.gestures)
             .apply()
     }
 
@@ -25,5 +27,6 @@ class SharedPrefsAssistantSettingsRepository(
         const val CALENDAR = "assistant_calendar"
         const val MOTION = "assistant_motion"
         const val AUTO = "assistant_auto"
+        const val GESTURES = "assistant_gestures"
     }
 }

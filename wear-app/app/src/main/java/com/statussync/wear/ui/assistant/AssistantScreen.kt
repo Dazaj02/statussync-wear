@@ -38,8 +38,11 @@ fun AssistantScreen(
     onCalendar: (Boolean) -> Unit,
     onMotion: (Boolean) -> Unit,
     onAuto: (Boolean) -> Unit,
+    onGestures: (Boolean) -> Unit,
     onSimulateClass: () -> Unit,
     onSimulateStillness: () -> Unit,
+    onSimulateShake: () -> Unit,
+    onSimulateTwist: () -> Unit,
 ) {
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -66,6 +69,7 @@ fun AssistantScreen(
         }
         item { Toggle(R.string.assistant_calendar, R.string.assistant_calendar_hint, ui.settings.calendar, onCalendar) }
         item { Toggle(R.string.assistant_motion, R.string.assistant_motion_hint, ui.settings.motion, onMotion) }
+        item { Toggle(R.string.assistant_gestures, R.string.assistant_gestures_hint, ui.settings.gestures, onGestures) }
         item { Toggle(R.string.assistant_auto, R.string.assistant_auto_hint, ui.settings.autoApply, onAuto) }
         item {
             Text(
@@ -78,6 +82,8 @@ fun AssistantScreen(
         }
         item { SimulateButton(stringResource(R.string.assistant_simulate_class), onSimulateClass) }
         item { SimulateButton(stringResource(R.string.assistant_simulate_still), onSimulateStillness) }
+        item { SimulateButton(stringResource(R.string.assistant_simulate_shake), onSimulateShake) }
+        item { SimulateButton(stringResource(R.string.assistant_simulate_twist), onSimulateTwist) }
     }
 }
 
@@ -209,4 +215,5 @@ private fun SuggestionReason.textRes(): Int = when (this) {
     SuggestionReason.ScheduleNow -> R.string.reason_schedule_now
     SuggestionReason.ScheduleSoon -> R.string.reason_schedule_soon
     SuggestionReason.Stillness -> R.string.reason_stillness
+    SuggestionReason.Gesture -> R.string.reason_gesture
 }

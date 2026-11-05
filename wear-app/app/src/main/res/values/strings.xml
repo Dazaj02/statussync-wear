@@ -36,6 +36,12 @@
     <string name="assistant_motion_hint">Detecta cuándo llevas rato quieto</string>
     <string name="assistant_auto">Auto-cambio</string>
     <string name="assistant_auto_hint">Cambia solo y puedes deshacer</string>
+    <string name="assistant_gestures">Gestos</string>
+    <string name="assistant_gestures_hint">Sacude 2 veces: Enfoque. Gira la muñeca: elegir</string>
+    <string name="assistant_simulate_shake">Simular sacudida</string>
+    <string name="assistant_simulate_twist">Simular giro</string>
+    <string name="gesture_pick_title">¿Qué estado?</string>
+    <string name="reason_gesture">Lo pediste con un gesto</string>
     <string name="assistant_simulate_title">Probar sin datos reales</string>
     <string name="assistant_simulate_class">Simular clase</string>
     <string name="assistant_simulate_still">Simular quietud</string>

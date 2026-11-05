@@ -6,16 +6,22 @@ import com.statussync.wear.data.SimulatedInputs
 import com.statussync.wear.domain.AssistantSettings
 import com.statussync.wear.domain.AssistantSettingsRepository
 import com.statussync.wear.domain.AvailabilityState
+import com.statussync.wear.domain.Gesture
+import com.statussync.wear.domain.GestureSource
 import com.statussync.wear.domain.MotionSource
 import com.statussync.wear.domain.ScheduleSource
 import com.statussync.wear.domain.Status
 import com.statussync.wear.domain.StatusRepository
 import com.statussync.wear.domain.Suggestion
+import com.statussync.wear.domain.SuggestionReason
+import com.statussync.wear.domain.SuggestionSource
 import com.statussync.wear.domain.SuggestionEngine
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -30,6 +36,9 @@ data class AssistantUiState(
     val undo: Suggestion? = null,
 )
 
+/** Avisos de un gesto reconocido para que la UI vibre o abra el selector. */
+enum class GestureEvent { FocusStarted, OpenPicker }
+
 class AssistantViewModel(
     private val statusRepository: StatusRepository,
     private val settingsRepository: AssistantSettingsRepository,
@@ -37,11 +46,15 @@ class AssistantViewModel(
     private val motion: MotionSource,
     private val simulation: SimulatedInputs,
     private val clock: Clock = Clock.systemUTC(),
+    private val gestures: GestureSource = GestureSource.None,
 ) : ViewModel() {
     private val pending = MutableStateFlow<Suggestion?>(null)
     private val undo = MutableStateFlow<Suggestion?>(null)
     private var statusBeforeAuto: Status? = null
     private val dismissedUntil = mutableMapOf<String, Instant>()
+
+    private val _gestureEvents = MutableSharedFlow<GestureEvent>(extraBufferCapacity = 1)
+    val gestureEvents: SharedFlow<GestureEvent> = _gestureEvents
 
     val uiState: StateFlow<AssistantUiState> = combine(settingsRepository.settings, pending, undo) { s, p, u ->
         AssistantUiState(s, p, u)
@@ -111,6 +124,48 @@ class AssistantViewModel(
 
     fun setAutoApply(enabled: Boolean) = settingsRepository.update { it.copy(autoApply = enabled) }
 
+    fun setGestures(enabled: Boolean) {
+        settingsRepository.update { it.copy(gestures = enabled) }
+        if (enabled) gestures.start(::onGesture) else gestures.stop()
+    }
+
+    /** La app pasa a estar visible: escucha los gestos si están activados. */
+    fun resumeGestures() {
+        if (settingsRepository.settings.value.gestures) gestures.start(::onGesture)
+    }
+
+    /**
+     * Doble sacudida: de Libre a Enfoque (no pisa un bloque en curso), con deshacer.
+     * Giro de muñeca: pide abrir el selector. Un cambio manual posterior siempre gana.
+     */
+    fun onGesture(gesture: Gesture) {
+        when (gesture) {
+            Gesture.DoubleShake -> {
+                statusRepository.expireIfDue()
+                val current = statusRepository.status.value
+                if (current.state != AvailabilityState.Free) return
+                val minutes = AvailabilityState.Focus.quickDurationMin ?: return
+                statusBeforeAuto = current
+                statusRepository.setState(AvailabilityState.Focus, Duration.ofMinutes(minutes.toLong()))
+                undo.value = Suggestion(
+                    key = "gesture-focus",
+                    state = AvailabilityState.Focus,
+                    durationMin = minutes,
+                    confidence = 1f,
+                    reason = SuggestionReason.Gesture,
+                    source = SuggestionSource.Motion,
+                    dismissFor = Duration.ZERO,
+                )
+                _gestureEvents.tryEmit(GestureEvent.FocusStarted)
+            }
+            Gesture.WristTwist -> _gestureEvents.tryEmit(GestureEvent.OpenPicker)
+        }
+    }
+
+    fun simulateShake() = onGesture(Gesture.DoubleShake)
+
+    fun simulateTwist() = onGesture(Gesture.WristTwist)
+
     fun simulateClass() {
         simulation.simulateClass()
         settingsRepository.update { it.copy(calendar = true) }
@@ -124,7 +179,10 @@ class AssistantViewModel(
     }
 
     /** La app dejó de estar visible: suelta los sensores. */
-    fun pause() = motion.release()
+    fun pause() {
+        motion.release()
+        gestures.stop()
+    }
 
     private fun apply(suggestion: Suggestion) =
         statusRepository.setState(suggestion.state, Duration.ofMinutes(suggestion.durationMin.toLong()))

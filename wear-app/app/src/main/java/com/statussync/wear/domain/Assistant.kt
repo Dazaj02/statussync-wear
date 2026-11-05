@@ -22,7 +22,7 @@ data class MotionFeature(
     val windowEnd: Instant get() = windowStart.plus(Duration.ofMinutes(windowMinutes.toLong()))
 }
 
-enum class SuggestionReason { ScheduleNow, ScheduleSoon, Stillness }
+enum class SuggestionReason { ScheduleNow, ScheduleSoon, Stillness, Gesture }
 
 /** Origen de la sugerencia; equivale a `auto_calendar` / `auto_motion` del contrato. */
 enum class SuggestionSource { Calendar, Motion }
@@ -42,6 +42,8 @@ data class AssistantSettings(
     val calendar: Boolean = false,
     val motion: Boolean = false,
     val autoApply: Boolean = false,
+    /** Sacudir la muñeca dos veces pasa de Libre a Enfoque; girarla abre el selector. */
+    val gestures: Boolean = false,
 )
 
 interface AssistantSettingsRepository {

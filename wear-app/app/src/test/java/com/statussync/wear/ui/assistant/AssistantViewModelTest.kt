@@ -5,6 +5,8 @@ import com.statussync.wear.data.InMemoryStatusRepository
 import com.statussync.wear.data.SimulatedInputs
 import com.statussync.wear.domain.AssistantSettings
 import com.statussync.wear.domain.AvailabilityState
+import com.statussync.wear.domain.Gesture
+import com.statussync.wear.domain.GestureSource
 import com.statussync.wear.domain.MotionFeature
 import com.statussync.wear.domain.MotionSource
 import com.statussync.wear.domain.ScheduleBlock
@@ -16,6 +18,7 @@ import java.time.ZoneId
 import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -53,7 +56,14 @@ class AssistantViewModelTest {
         override fun release() { released = true }
     }
 
-    private fun viewModel() = AssistantViewModel(status, settings, schedule, motion, simulation, clock)
+    private var gestureStarts = 0
+    private var gestureStops = 0
+    private val gestureSource = object : GestureSource {
+        override fun start(onGesture: (Gesture) -> Unit) { gestureStarts++ }
+        override fun stop() { gestureStops++ }
+    }
+
+    private fun viewModel() = AssistantViewModel(status, settings, schedule, motion, simulation, clock, gestureSource)
 
     private fun classBlock() = ScheduleBlock(AvailabilityState.Class, now.minusSeconds(60), now.plus(Duration.ofMinutes(45)))
 
@@ -155,5 +165,59 @@ class AssistantViewModelTest {
         viewModel().pause()
 
         assertTrue(released)
+    }
+
+    @Test
+    fun doubleShakeStartsFocusFromFreeAndCanBeUndone() = runTest(dispatcher) {
+        val vm = viewModel()
+        backgroundScope.launch(dispatcher) { vm.uiState.collect {} }
+
+        vm.onGesture(Gesture.DoubleShake)
+
+        assertEquals(AvailabilityState.Focus, status.status.value.state)
+        assertEquals(AvailabilityState.Focus, vm.uiState.value.undo?.state)
+
+        vm.undoAuto()
+
+        assertEquals(AvailabilityState.Free, status.status.value.state)
+    }
+
+    @Test
+    fun doubleShakeNeverOverridesARunningStatus() = runTest(dispatcher) {
+        status.setState(AvailabilityState.Call, Duration.ofMinutes(20))
+        val vm = viewModel()
+
+        vm.onGesture(Gesture.DoubleShake)
+
+        assertEquals(AvailabilityState.Call, status.status.value.state)
+    }
+
+    @Test
+    fun wristTwistOnlyAsksToOpenThePicker() = runTest(dispatcher) {
+        val vm = viewModel()
+        var event: GestureEvent? = null
+        backgroundScope.launch(dispatcher) { event = vm.gestureEvents.first() }
+
+        vm.onGesture(Gesture.WristTwist)
+
+        assertEquals(GestureEvent.OpenPicker, event)
+        assertEquals(AvailabilityState.Free, status.status.value.state)
+    }
+
+    @Test
+    fun gesturesListenOnlyWhenEnabledAndStopOnPause() {
+        val vm = viewModel()
+
+        vm.resumeGestures()
+        assertEquals(0, gestureStarts)
+
+        vm.setGestures(true)
+        vm.resumeGestures()
+        assertEquals(2, gestureStarts)
+
+        vm.pause()
+        assertEquals(1, gestureStops)
+        vm.setGestures(false)
+        assertEquals(2, gestureStops)
     }
 }
