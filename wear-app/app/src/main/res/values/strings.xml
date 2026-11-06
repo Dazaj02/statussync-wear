@@ -57,6 +57,8 @@
     <string name="lab_live">Pellizco en vivo · 30 s</string>
     <string name="lab_live_hint">Haz 2 pellizcos, espera 2 s y repite. Cuento los que detecto</string>
     <string name="lab_live_format">%1$d s · detectados: %2$d</string>
+    <string name="lab_false">Falsas alarmas · 20 s</string>
+    <string name="lab_false_hint">Mueve la muñeca y la mano como en el día, SIN pellizcar. Debe contar 0</string>
     <string name="lab_walk">Caminar · 15 s</string>
     <string name="lab_walk_hint">Camina o mueve el brazo normal</string>
     <string name="gesture_pick_title">¿Qué estado?</string>

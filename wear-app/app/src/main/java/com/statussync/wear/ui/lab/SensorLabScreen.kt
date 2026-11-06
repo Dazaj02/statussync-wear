@@ -34,6 +34,7 @@ private val SESSIONS = listOf(
     Session("pellizco3", 20, R.string.lab_pinch3, R.string.lab_pinch_hint),
     Session("caminar", 15, R.string.lab_walk, R.string.lab_walk_hint),
     Session("vivo", 30, R.string.lab_live, R.string.lab_live_hint, live = true),
+    Session("falsos", 20, R.string.lab_false, R.string.lab_false_hint, live = true),
 )
 
 /** Pantalla de pruebas: graba sensores 15–20 s mientras haces cada movimiento. No forma parte del uso normal. */

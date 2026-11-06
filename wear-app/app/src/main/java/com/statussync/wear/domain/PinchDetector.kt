@@ -34,6 +34,13 @@ class PinchDetector(
         history.addLast(sample)
         while (history.isNotEmpty() && history.first().timeMs < timeMs - HISTORY_MS) history.removeFirst()
 
+        if (series.isNotEmpty() && magnitude > MOTION_ABORT) {
+            // Un pellizco nunca mueve tanto: es la muñeca o el brazo.
+            series = mutableListOf()
+            cooldownUntil = timeMs + MOTION_COOLDOWN_MS
+            onReject(timeMs, "move")
+        }
+
         val p1 = prev1
         val p2 = prev2
         if (p1 != null && p2 != null && p1.magnitude >= TAP_THRESHOLD && p1.magnitude >= p2.magnitude && p1.magnitude > magnitude) {
@@ -45,7 +52,9 @@ class PinchDetector(
         val last = series.lastOrNull() ?: return null
         if (series.size >= 2) {
             if (timeMs - last.timeMs < CONFIRM_MS) return null
-            val valid = series.size <= MAX_TAPS && (series[1].timeMs - series[0].timeMs) in GAP_MIN_MS..GAP_MAX_MS
+            val similar = series[0].magnitude <= SIMILAR_RATIO * series[1].magnitude &&
+                series[1].magnitude <= SIMILAR_RATIO * series[0].magnitude
+            val valid = similar && series.size <= MAX_TAPS && (series[1].timeMs - series[0].timeMs) in GAP_MIN_MS..GAP_MAX_MS
             series = mutableListOf()
             if (!valid) {
                 onReject(timeMs, "long") // serie larga: caminar o ruido
@@ -80,6 +89,11 @@ class PinchDetector(
 
     private fun registerTap(sample: Sample) {
         if (sample.timeMs < cooldownUntil) return
+        if (sample.magnitude > MAX_TAP) {
+            series = mutableListOf()
+            onReject(sample.timeMs, "move")
+            return
+        }
         val last = series.lastOrNull()
         when {
             last != null && sample.timeMs - last.timeMs < REFRACTORY_MS -> {
@@ -120,16 +134,20 @@ class PinchDetector(
 
     private companion object {
         const val WINDOW = 10
-        const val HISTORY_MS = 1_500L
+        const val HISTORY_MS = 2_000L
         const val TAP_THRESHOLD = 0.45f
         const val REFRACTORY_MS = 80L
+        const val MAX_TAP = 2.0f
+        const val MOTION_ABORT = 2.5f
+        const val MOTION_COOLDOWN_MS = 800L
+        const val SIMILAR_RATIO = 3f
         const val CONFIRM_MS = 300L
         const val MAX_TAPS = 3
         const val GAP_MIN_MS = 150L
         const val GAP_MAX_MS = 500L
-        const val QUIET_RMS = 0.25f
+        const val QUIET_RMS = 0.2f
         const val QUIET_GUARD_MS = 100L
-        const val QUIET_LOOKBACK_MS = 600L
+        const val QUIET_LOOKBACK_MS = 800L
         const val COOLDOWN_MS = 1_200L
     }
 }
