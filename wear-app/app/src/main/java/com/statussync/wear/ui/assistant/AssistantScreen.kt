@@ -29,6 +29,7 @@ import com.statussync.wear.domain.Suggestion
 import com.statussync.wear.domain.SuggestionReason
 import com.statussync.wear.ui.theme.color
 import com.statussync.wear.ui.theme.onColor
+import com.statussync.wear.ui.theme.BrandPrimary
 import com.statussync.wear.ui.theme.onColorFor
 
 /** Ajustes del asistente: tres interruptores y botones para probarlo sin datos reales. */
@@ -111,7 +112,7 @@ private fun SimulateButton(label: String, onClick: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
-        icon = { IconBadge(R.drawable.ic_assistant, Color(0xFF7A4FD6)) },
+        icon = { IconBadge(R.drawable.ic_assistant, BrandPrimary) },
         label = { Text(label) },
     )
 }

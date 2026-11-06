@@ -11,7 +11,6 @@ import com.statussync.wear.ui.StatusSyncRoot
 import com.statussync.wear.ui.assistant.AssistantViewModel
 import com.statussync.wear.ui.group.GroupViewModel
 import com.statussync.wear.ui.home.StatusViewModel
-import com.statussync.wear.ui.theme.StatusSyncTheme
 
 class MainActivity : ComponentActivity() {
     private val viewModel: StatusViewModel by viewModels {
@@ -50,9 +49,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            StatusSyncTheme {
-                StatusSyncRoot(viewModel = viewModel, groupViewModel = groupViewModel, assistantViewModel = assistantViewModel, onTimerFinished = { vibrateTimerFinished(this) })
-            }
+            StatusSyncRoot(viewModel = viewModel, groupViewModel = groupViewModel, assistantViewModel = assistantViewModel, onTimerFinished = { vibrateTimerFinished(this) })
         }
     }
 }

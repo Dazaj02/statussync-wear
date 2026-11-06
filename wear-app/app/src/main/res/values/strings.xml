@@ -17,7 +17,8 @@
     <string name="add_base_hint">Tus compañeros verán este estado</string>
     <string name="add_color_title">Color</string>
     <string name="add_duration_title">Duraciones</string>
-    <string name="remove_title">¿Cuál eliminar?</string>
+    <string name="remove_hint">Mantén pulsado un estado tuyo para eliminarlo</string>
+    <string name="state_active">Activo</string>
     <string name="remove_confirm_title">¿Eliminar «%1$s»?</string>
     <string name="remove_confirm_yes">Eliminar</string>
     <string name="remove_confirm_no">Cancelar</string>

@@ -38,6 +38,8 @@ import com.statussync.wear.ui.home.DurationPickerScreen
 import com.statussync.wear.ui.home.HomeEvent
 import com.statussync.wear.ui.home.HomeScreen
 import com.statussync.wear.ui.home.StatusViewModel
+import com.statussync.wear.ui.theme.BrandPrimary
+import com.statussync.wear.ui.theme.StatusSyncTheme
 import com.statussync.wear.ui.theme.color
 import com.statussync.wear.ui.theme.onColorFor
 import java.time.Duration
@@ -57,7 +59,6 @@ private sealed interface Route {
     data class AddBase(val name: String) : Route
     data class AddColor(val name: String, val base: AvailabilityState) : Route
     data class AddDuration(val name: String, val base: AvailabilityState, val colorArgb: Long) : Route
-    data object Manage : Route
     data object Group : Route
     data object Assistant : Route
     /** Selector de estado que abre el giro de muñeca. */
@@ -69,12 +70,12 @@ private sealed interface Route {
 
 private fun Route.parent(): Route = when (this) {
     Route.Home -> Route.Home
-    is Route.PickDuration, Route.AddName, Route.Manage, Route.Group, Route.Assistant, Route.PickState -> Route.Home
+    is Route.PickDuration, Route.AddName, Route.Group, Route.Assistant, Route.PickState -> Route.Home
     Route.SensorLab -> Route.Assistant
     is Route.AddBase -> Route.AddName
     is Route.AddColor -> Route.AddBase(name)
     is Route.AddDuration -> Route.AddColor(name, base)
-    is Route.ConfirmRemove -> Route.Manage
+    is Route.ConfirmRemove -> Route.Home
 }
 
 private const val EVALUATE_EVERY_MILLIS = 30_000L
@@ -189,141 +190,138 @@ fun StatusSyncRoot(
         }
     }
 
-    when (val current = route) {
-        Route.Home -> HomeScreen(
-            ui = ui,
-            customStates = customStates,
-            onFree = { viewModel.select(AvailabilityState.Free) },
-            onPickTimer = { state ->
-                route = Route.PickDuration(
-                    baseLabelRes = state.labelRes,
-                    customName = null,
-                    color = state.color(),
-                    optionsMin = state.durationOptionsMin,
-                    onStart = { min -> viewModel.select(state, Duration.ofMinutes(min.toLong())); goHome() },
-                )
-            },
-            onPickCustom = ::pickCustom,
-            onAdd = { route = Route.AddName },
-            onRemove = { route = Route.Manage },
-            onGroup = { route = Route.Group },
-            assistant = assistant,
-            onAccept = assistantViewModel::accept,
-            onDismissSuggestion = assistantViewModel::dismiss,
-            onUndo = assistantViewModel::undoAuto,
-            onAssistant = { route = Route.Assistant },
-        )
+    val homeColor = ui.custom?.let { Color(it.colorArgb) } ?: ui.state.color()
+    StatusSyncTheme(primary = if (route == Route.Home) homeColor else BrandPrimary) {
+        when (val current = route) {
+            Route.Home -> HomeScreen(
+                ui = ui,
+                customStates = customStates,
+                onFree = { viewModel.select(AvailabilityState.Free) },
+                onPickTimer = { state ->
+                    route = Route.PickDuration(
+                        baseLabelRes = state.labelRes,
+                        customName = null,
+                        color = state.color(),
+                        optionsMin = state.durationOptionsMin,
+                        onStart = { min -> viewModel.select(state, Duration.ofMinutes(min.toLong())); goHome() },
+                    )
+                },
+                onPickCustom = ::pickCustom,
+                onAdd = { route = Route.AddName },
+                onRemoveCustom = { route = Route.ConfirmRemove(it) },
+                onGroup = { route = Route.Group },
+                assistant = assistant,
+                onAccept = assistantViewModel::accept,
+                onDismissSuggestion = assistantViewModel::dismiss,
+                onUndo = assistantViewModel::undoAuto,
+                onAssistant = { route = Route.Assistant },
+            )
 
-        Route.Assistant -> AssistantScreen(
-            ui = assistant,
-            onCalendar = { on ->
-                if (on) enableWithPermission(Manifest.permission.READ_CALENDAR) { assistantViewModel.setCalendar(true) }
-                else assistantViewModel.setCalendar(false)
-            },
-            onMotion = { on ->
-                if (on) enableWithPermission(Manifest.permission.ACTIVITY_RECOGNITION) { assistantViewModel.setMotion(true) }
-                else assistantViewModel.setMotion(false)
-            },
-            onAuto = assistantViewModel::setAutoApply,
-            onGestures = assistantViewModel::setGestures,
-            onPinch = assistantViewModel::setPinch,
-            onSimulateClass = assistantViewModel::simulateClass,
-            onSimulateStillness = assistantViewModel::simulateStillness,
-            onSimulateShake = assistantViewModel::simulateShake,
-            onSimulatePinch = assistantViewModel::simulatePinch,
-            onSensorLab = { route = Route.SensorLab },
-        )
+            Route.Assistant -> AssistantScreen(
+                ui = assistant,
+                onCalendar = { on ->
+                    if (on) enableWithPermission(Manifest.permission.READ_CALENDAR) { assistantViewModel.setCalendar(true) }
+                    else assistantViewModel.setCalendar(false)
+                },
+                onMotion = { on ->
+                    if (on) enableWithPermission(Manifest.permission.ACTIVITY_RECOGNITION) { assistantViewModel.setMotion(true) }
+                    else assistantViewModel.setMotion(false)
+                },
+                onAuto = assistantViewModel::setAutoApply,
+                onGestures = assistantViewModel::setGestures,
+                onPinch = assistantViewModel::setPinch,
+                onSimulateClass = assistantViewModel::simulateClass,
+                onSimulateStillness = assistantViewModel::simulateStillness,
+                onSimulateShake = assistantViewModel::simulateShake,
+                onSimulatePinch = assistantViewModel::simulatePinch,
+                onSensorLab = { route = Route.SensorLab },
+            )
 
-        Route.SensorLab -> SensorLabScreen(sensorRecorder)
+            Route.SensorLab -> SensorLabScreen(sensorRecorder)
 
-        Route.PickState -> ChoiceScreen(
-            title = stringResource(R.string.gesture_pick_title),
-            choices = AvailabilityState.entries.map {
-                Choice(it.wireName, stringResource(it.labelRes), it.color(), onColorFor(it.color()))
-            } + customStates.map {
-                Choice("custom:${it.id}", it.name, Color(it.colorArgb), onColorFor(Color(it.colorArgb)))
-            } + Choice("add", stringResource(R.string.action_add_state)),
-            onPick = { picked ->
-                when {
-                    picked.key == "add" -> route = Route.AddName
-                    picked.key.startsWith("custom:") ->
-                        customStates.firstOrNull { "custom:${it.id}" == picked.key }?.let(::pickCustom)
-                    else -> pickBase(AvailabilityState.fromWire(picked.key) ?: AvailabilityState.Free)
-                }
-            },
-        )
+            Route.PickState -> ChoiceScreen(
+                title = stringResource(R.string.gesture_pick_title),
+                choices = AvailabilityState.entries.map {
+                    Choice(it.wireName, stringResource(it.labelRes), it.color(), onColorFor(it.color()))
+                } + customStates.map {
+                    Choice("custom:${it.id}", it.name, Color(it.colorArgb), onColorFor(Color(it.colorArgb)))
+                } + Choice("add", stringResource(R.string.action_add_state)),
+                onPick = { picked ->
+                    when {
+                        picked.key == "add" -> route = Route.AddName
+                        picked.key.startsWith("custom:") ->
+                            customStates.firstOrNull { "custom:${it.id}" == picked.key }?.let(::pickCustom)
+                        else -> pickBase(AvailabilityState.fromWire(picked.key) ?: AvailabilityState.Free)
+                    }
+                },
+            )
 
-        Route.Group -> GroupScreen(groupViewModel.uiState.collectAsStateWithLifecycle().value)
+            Route.Group -> GroupScreen(groupViewModel.uiState.collectAsStateWithLifecycle().value)
 
-        is Route.PickDuration -> DurationPickerScreen(
-            stateName = current.customName ?: current.baseLabelRes?.let { stringResource(it) }.orEmpty(),
-            color = current.color,
-            optionsMin = current.optionsMin,
-            onPicked = current.onStart,
-        )
+            is Route.PickDuration -> DurationPickerScreen(
+                stateName = current.customName ?: current.baseLabelRes?.let { stringResource(it) }.orEmpty(),
+                color = current.color,
+                optionsMin = current.optionsMin,
+                onPicked = current.onStart,
+            )
 
-        Route.AddName -> ChoiceScreen(
-            title = stringResource(R.string.add_name_title),
-            choices = stringArrayResource(R.array.suggested_names).map { Choice(it, it) },
-            onPick = { route = Route.AddBase(it.key) },
-        )
+            Route.AddName -> ChoiceScreen(
+                title = stringResource(R.string.add_name_title),
+                choices = stringArrayResource(R.array.suggested_names).map { Choice(it, it) },
+                onPick = { route = Route.AddBase(it.key) },
+            )
 
-        is Route.AddBase -> ChoiceScreen(
-            eyebrow = current.name,
-            title = stringResource(R.string.add_base_title),
-            hint = stringResource(R.string.add_base_hint),
-            choices = AvailabilityState.entries.map {
-                Choice(it.wireName, stringResource(it.labelRes), it.color(), onColorFor(it.color()))
-            },
-            onPick = { route = Route.AddColor(current.name, AvailabilityState.fromWire(it.key) ?: AvailabilityState.Free) },
-        )
+            is Route.AddBase -> ChoiceScreen(
+                eyebrow = current.name,
+                title = stringResource(R.string.add_base_title),
+                hint = stringResource(R.string.add_base_hint),
+                choices = AvailabilityState.entries.map {
+                    Choice(it.wireName, stringResource(it.labelRes), it.color(), onColorFor(it.color()))
+                },
+                onPick = { route = Route.AddColor(current.name, AvailabilityState.fromWire(it.key) ?: AvailabilityState.Free) },
+            )
 
-        is Route.AddColor -> ChoiceScreen(
-            eyebrow = current.name,
-            title = stringResource(R.string.add_color_title),
-            choices = PALETTE.map { (argb, nameRes) ->
-                Choice(argb.toString(), stringResource(nameRes), Color(argb), onColorFor(Color(argb)))
-            },
-            onPick = { picked ->
-                val argb = picked.key.toLong()
-                if (current.base.hasTimer) {
-                    route = Route.AddDuration(current.name, current.base, argb)
-                } else {
-                    viewModel.addCustomState(current.name, current.base, argb, emptyList())
+            is Route.AddColor -> ChoiceScreen(
+                eyebrow = current.name,
+                title = stringResource(R.string.add_color_title),
+                choices = PALETTE.map { (argb, nameRes) ->
+                    Choice(argb.toString(), stringResource(nameRes), Color(argb), onColorFor(Color(argb)))
+                },
+                onPick = { picked ->
+                    val argb = picked.key.toLong()
+                    if (current.base.hasTimer) {
+                        route = Route.AddDuration(current.name, current.base, argb)
+                    } else {
+                        viewModel.addCustomState(current.name, current.base, argb, emptyList())
+                        goHome()
+                    }
+                },
+            )
+
+            is Route.AddDuration -> ChoiceScreen(
+                eyebrow = current.name,
+                eyebrowColor = Color(current.colorArgb),
+                title = stringResource(R.string.add_duration_title),
+                choices = DURATION_SETS.mapIndexed { index, set ->
+                    Choice(index.toString(), set.joinToString(" · ") + " min")
+                },
+                onPick = { picked ->
+                    viewModel.addCustomState(current.name, current.base, current.colorArgb, DURATION_SETS[picked.key.toInt()])
                     goHome()
-                }
-            },
-        )
+                },
+            )
 
-        is Route.AddDuration -> ChoiceScreen(
-            eyebrow = current.name,
-            eyebrowColor = Color(current.colorArgb),
-            title = stringResource(R.string.add_duration_title),
-            choices = DURATION_SETS.mapIndexed { index, set ->
-                Choice(index.toString(), set.joinToString(" · ") + " min")
-            },
-            onPick = { picked ->
-                viewModel.addCustomState(current.name, current.base, current.colorArgb, DURATION_SETS[picked.key.toInt()])
-                goHome()
-            },
-        )
-
-        Route.Manage -> ChoiceScreen(
-            title = stringResource(R.string.remove_title),
-            choices = customStates.map { Choice(it.id, it.name, Color(it.colorArgb), onColorFor(Color(it.colorArgb))) },
-            onPick = { picked -> customStates.firstOrNull { it.id == picked.key }?.let { route = Route.ConfirmRemove(it) } },
-        )
-
-        is Route.ConfirmRemove -> ChoiceScreen(
-            title = stringResource(R.string.remove_confirm_title, current.state.name),
-            choices = listOf(
-                Choice("yes", stringResource(R.string.remove_confirm_yes), Color(0xFFD64545), Color.White),
-                Choice("no", stringResource(R.string.remove_confirm_no)),
-            ),
-            onPick = { picked ->
-                if (picked.key == "yes") viewModel.removeCustomState(current.state.id)
-                goHome()
-            },
-        )
+            is Route.ConfirmRemove -> ChoiceScreen(
+                title = stringResource(R.string.remove_confirm_title, current.state.name),
+                choices = listOf(
+                    Choice("yes", stringResource(R.string.remove_confirm_yes), Color(0xFFD64545), Color.White),
+                    Choice("no", stringResource(R.string.remove_confirm_no)),
+                ),
+                onPick = { picked ->
+                    if (picked.key == "yes") viewModel.removeCustomState(current.state.id)
+                    goHome()
+                },
+            )
+        }
     }
 }

@@ -1,23 +1,27 @@
 package com.statussync.wear.ui.home
 
 import androidx.annotation.DrawableRes
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -29,10 +33,14 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.wear.compose.foundation.lazy.AutoCenteringParams
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
+import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ButtonDefaults
 import androidx.wear.compose.material3.Icon
+import androidx.wear.compose.material3.IconButton
+import androidx.wear.compose.material3.IconButtonDefaults
 import androidx.wear.compose.material3.MaterialTheme
 import androidx.wear.compose.material3.Text
 import com.statussync.wear.R
@@ -41,7 +49,6 @@ import com.statussync.wear.domain.CustomState
 import com.statussync.wear.ui.assistant.AssistantUiState
 import com.statussync.wear.ui.assistant.assistantItems
 import com.statussync.wear.ui.format.formatClock
-import com.statussync.wear.ui.theme.SurfaceContainer
 import com.statussync.wear.ui.theme.color
 import com.statussync.wear.ui.theme.onColor
 import com.statussync.wear.ui.theme.onColorFor
@@ -54,7 +61,7 @@ fun HomeScreen(
     onPickTimer: (AvailabilityState) -> Unit,
     onPickCustom: (CustomState) -> Unit,
     onAdd: () -> Unit,
-    onRemove: () -> Unit,
+    onRemoveCustom: (CustomState) -> Unit,
     onGroup: () -> Unit,
     assistant: AssistantUiState,
     onAccept: () -> Unit,
@@ -68,6 +75,9 @@ fun HomeScreen(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
+        // El estado actual abre centrado en pantalla; los botones aparecen al deslizar.
+        state = rememberScalingLazyListState(initialCenterItemIndex = 0),
+        autoCentering = AutoCenteringParams(itemIndex = 0),
     ) {
         item { CurrentStatus(ui) }
         assistantItems(assistant, onAccept, onDismissSuggestion, onUndo)
@@ -98,33 +108,57 @@ fun HomeScreen(
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onPickCustom(custom)
                 },
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onRemoveCustom(custom)
+                },
+                longClickLabel = stringResource(R.string.action_remove_state),
             )
         }
-        item { ActionButton(stringResource(R.string.action_assistant), R.drawable.ic_assistant, Color(0xFF7A4FD6), onAssistant) }
-        item { ActionButton(stringResource(R.string.action_group), R.drawable.ic_group, Color(0xFF14B8A6), onGroup) }
-        if (customStates.size < CustomState.MAX_COUNT) {
-            item { ActionButton(stringResource(R.string.action_add_state), R.drawable.ic_add, Color(0xFF3B82F6), onAdd) }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                ActionIcon(R.drawable.ic_assistant, stringResource(R.string.action_assistant), onAssistant)
+                ActionIcon(R.drawable.ic_group, stringResource(R.string.action_group), onGroup)
+                if (customStates.size < CustomState.MAX_COUNT) {
+                    ActionIcon(R.drawable.ic_add, stringResource(R.string.action_add_state), onAdd)
+                }
+            }
         }
         if (customStates.isNotEmpty()) {
-            item { ActionButton(stringResource(R.string.action_remove_state), R.drawable.ic_delete, Color(0xFFD64545), onRemove) }
+            item {
+                Text(
+                    text = stringResource(R.string.remove_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                )
+            }
         }
     }
 }
 
 @Composable
 private fun CurrentStatus(ui: HomeUiState) {
-    val color = ui.custom?.let { Color(it.colorArgb) } ?: ui.state.color()
-    val onColor = ui.custom?.let { onColorFor(color) } ?: ui.state.onColor()
-    val glow = remember(color) { Brush.radialGradient(listOf(color.copy(alpha = 0.30f), Color.Transparent)) }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(modifier = Modifier.size(132.dp), contentAlignment = Alignment.Center) {
+    val target = ui.custom?.let { Color(it.colorArgb) } ?: ui.state.color()
+    val onTarget = ui.custom?.let { onColorFor(target) } ?: ui.state.onColor()
+    // Una sola animación: el anillo cambia de color y de avance al cambiar de estado.
+    val color by animateColorAsState(target, tween(300), label = "statusColor")
+    val onColor by animateColorAsState(onTarget, tween(300), label = "statusOnColor")
+    val progress by animateFloatAsState(ui.progress, tween(300), label = "statusProgress")
+    val track = MaterialTheme.colorScheme.surfaceContainer
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Box(modifier = Modifier.size(84.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
-                val stroke = 9.dp.toPx()
+                val stroke = 7.dp.toPx()
                 val inset = stroke / 2
                 val arcSize = Size(size.width - stroke, size.height - stroke)
-                drawCircle(brush = glow, radius = size.minDimension / 2)
                 drawArc(
-                    color = SurfaceContainer,
+                    color = track,
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -135,7 +169,7 @@ private fun CurrentStatus(ui: HomeUiState) {
                 drawArc(
                     color = color,
                     startAngle = -90f,
-                    sweepAngle = 360f * ui.progress,
+                    sweepAngle = 360f * progress,
                     useCenter = false,
                     topLeft = Offset(inset, inset),
                     size = arcSize,
@@ -143,14 +177,14 @@ private fun CurrentStatus(ui: HomeUiState) {
                 )
             }
             Box(
-                modifier = Modifier.size(76.dp).background(color, CircleShape),
+                modifier = Modifier.size(52.dp).background(color, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(ui.state.iconRes),
                     contentDescription = null,
                     tint = onColor,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(28.dp),
                 )
             }
         }
@@ -180,18 +214,24 @@ private fun StateButton(
     @DrawableRes iconRes: Int,
     selected: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    longClickLabel: String? = null,
 ) {
     Button(
         onClick = onClick,
+        onLongClick = onLongClick,
+        onLongClickLabel = longClickLabel,
         modifier = Modifier.fillMaxWidth().semantics { this.selected = selected },
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) color.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surfaceContainer,
+            containerColor = if (selected) color.copy(alpha = 0.35f) else MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
+        // El estado activo se marca con borde, texto y ícono de verificación, no solo con color.
+        border = if (selected) BorderStroke(2.dp, color) else null,
         icon = {
             Box(Modifier.size(36.dp).background(color, CircleShape), contentAlignment = Alignment.Center) {
                 Icon(
-                    painter = painterResource(iconRes),
+                    painter = painterResource(if (selected) R.drawable.ic_check else iconRes),
                     contentDescription = null,
                     tint = onColor,
                     modifier = Modifier.size(22.dp),
@@ -199,28 +239,21 @@ private fun StateButton(
             }
         },
         label = { Text(label) },
+        secondaryLabel = if (selected) ({ Text(stringResource(R.string.state_active)) }) else null,
     )
 }
 
+/** Acción secundaria: botón redondo de 48 dp con ícono neutro (el color queda reservado para los estados). */
 @Composable
-private fun ActionButton(label: String, @DrawableRes iconRes: Int, accent: Color, onClick: () -> Unit) {
-    Button(
+private fun ActionIcon(@DrawableRes iconRes: Int, description: String, onClick: () -> Unit) {
+    IconButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        colors = ButtonDefaults.buttonColors(
+        modifier = Modifier.size(IconButtonDefaults.DefaultButtonSize),
+        colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainer,
             contentColor = MaterialTheme.colorScheme.onSurface,
         ),
-        icon = {
-            Box(Modifier.size(36.dp).background(accent, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = onColorFor(accent),
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-        },
-        label = { Text(label) },
-    )
+    ) {
+        Icon(painter = painterResource(iconRes), contentDescription = description, modifier = Modifier.size(24.dp))
+    }
 }
