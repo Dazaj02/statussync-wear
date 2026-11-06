@@ -6,11 +6,16 @@ import kotlin.math.sqrt
  * Detector experimental de "dos pellizcos índice-pulgar", calibrado con grabaciones reales del Galaxy Watch4
  * (acelerómetro a 100 Hz). Un pellizco es un golpe corto de 0,5–1,3 m/s² sobre la parte rápida de la señal.
  *
- * Una serie de 2 a 5 golpes seguidos, con el primer par separado entre 0,15 y 0,5 s y precedida por la mano quieta,
- * cuenta como doble pellizco. El resultado se entrega 0,6 s después del último golpe, cuando se sabe que la serie terminó.
+ * Dos golpes separados entre 0,15 y 0,5 s y precedidos por la mano quieta cuentan como doble pellizco.
+ * El resultado se entrega 0,3 s después del segundo golpe, si no siguen más de uno extra (una serie larga es caminar o ruido).
  * Limitación conocida: con el antebrazo apoyado o moviéndose la señal se ensucia y no detecta.
  */
-class PinchDetector {
+class PinchDetector(
+    /** Se llama al detectar el primer golpe de una posible serie (para dar aviso táctil). */
+    private val onFirstTap: () -> Unit = {},
+    /** Se llama al descartar una serie, con el motivo: `move`, `gap` o `single`. */
+    private val onReject: (timeMs: Long, reason: String) -> Unit = { _, _ -> },
+) {
     private class Tap(val timeMs: Long, val magnitude: Float)
     private class Sample(val timeMs: Long, val magnitude: Float)
 
@@ -38,12 +43,22 @@ class PinchDetector {
         prev1 = sample
 
         val last = series.lastOrNull() ?: return null
-        if (timeMs - last.timeMs < SETTLE_MS) return null
-        val valid = series.size in 2..MAX_TAPS && (series[1].timeMs - series[0].timeMs) in GAP_MIN_MS..GAP_MAX_MS
-        series = mutableListOf()
-        if (!valid) return null
-        cooldownUntil = timeMs + COOLDOWN_MS
-        return Gesture.DoublePinch
+        if (series.size >= 2) {
+            if (timeMs - last.timeMs < CONFIRM_MS) return null
+            val valid = series.size <= MAX_TAPS && (series[1].timeMs - series[0].timeMs) in GAP_MIN_MS..GAP_MAX_MS
+            series = mutableListOf()
+            if (!valid) {
+                onReject(timeMs, "long") // serie larga: caminar o ruido
+                return null
+            }
+            cooldownUntil = timeMs + COOLDOWN_MS
+            return Gesture.DoublePinch
+        }
+        if (timeMs - last.timeMs > GAP_MAX_MS) {
+            series = mutableListOf()
+            onReject(timeMs, "single") // un golpe aislado, sin segundo
+        }
+        return null
     }
 
     /** Parte rápida de la señal: la muestra menos la media de las últimas [WINDOW] (quita gravedad y movimiento lento). */
@@ -71,9 +86,22 @@ class PinchDetector {
                 // Sigue siendo el mismo golpe: se queda con el pico más alto.
                 if (sample.magnitude > last.magnitude) series[series.lastIndex] = Tap(sample.timeMs, sample.magnitude)
             }
-            last != null && sample.timeMs - last.timeMs < SETTLE_MS -> series.add(Tap(sample.timeMs, sample.magnitude))
+            last != null && sample.timeMs - last.timeMs <= GAP_MAX_MS -> {
+                if (series.size >= 2 || sample.timeMs - last.timeMs >= GAP_MIN_MS) {
+                    series.add(Tap(sample.timeMs, sample.magnitude))
+                } else {
+                    onReject(sample.timeMs, "gap")
+                    series = mutableListOf(Tap(sample.timeMs, sample.magnitude))
+                }
+            }
             else -> {
-                series = if (wasStill(sample.timeMs)) mutableListOf(Tap(sample.timeMs, sample.magnitude)) else mutableListOf()
+                if (wasStill(sample.timeMs)) {
+                    series = mutableListOf(Tap(sample.timeMs, sample.magnitude))
+                    onFirstTap()
+                } else {
+                    series = mutableListOf()
+                    onReject(sample.timeMs, "move")
+                }
             }
         }
     }
@@ -95,13 +123,13 @@ class PinchDetector {
         const val HISTORY_MS = 1_500L
         const val TAP_THRESHOLD = 0.45f
         const val REFRACTORY_MS = 80L
-        const val SETTLE_MS = 600L
+        const val CONFIRM_MS = 300L
+        const val MAX_TAPS = 3
         const val GAP_MIN_MS = 150L
         const val GAP_MAX_MS = 500L
-        const val MAX_TAPS = 5
         const val QUIET_RMS = 0.25f
         const val QUIET_GUARD_MS = 100L
         const val QUIET_LOOKBACK_MS = 600L
-        const val COOLDOWN_MS = 200L
+        const val COOLDOWN_MS = 1_200L
     }
 }

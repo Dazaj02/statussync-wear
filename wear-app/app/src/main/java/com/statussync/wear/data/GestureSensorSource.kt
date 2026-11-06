@@ -9,17 +9,18 @@ import com.statussync.wear.domain.Gesture
 import com.statussync.wear.domain.GestureDetector
 import com.statussync.wear.domain.GestureSource
 import com.statussync.wear.domain.PinchDetector
+import com.statussync.wear.surface.vibrateTapSeen
 
 /**
  * Lee acelerómetro y giroscopio solo mientras la app está visible (la UI llama a [stop] al salir).
  * No guarda nada: cada muestra va a los detectores y se descarta.
  */
-class GestureSensorSource(context: Context) : GestureSource, SensorEventListener {
+class GestureSensorSource(private val context: Context) : GestureSource, SensorEventListener {
     private val sensorManager = context.getSystemService(SensorManager::class.java)
     private val accelerometer: Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     private val gyroscope: Sensor? = sensorManager?.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
     private val shakeDetector = GestureDetector()
-    private val pinchDetector = PinchDetector()
+    private val pinchDetector = PinchDetector(onFirstTap = { vibrateTapSeen(context) })
     private var listener: ((Gesture) -> Unit)? = null
     private var shakeAndTwist = false
     private var pinch = false

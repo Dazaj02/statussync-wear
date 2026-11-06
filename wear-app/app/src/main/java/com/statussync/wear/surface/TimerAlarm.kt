@@ -63,6 +63,12 @@ class TimerEndReceiver : BroadcastReceiver() {
 }
 
 /** Vibración corta: "te entendí" tras un gesto de muñeca. */
+/** Vibración mínima al detectar el primer pellizco, para saber que el reloj te está leyendo. */
+fun vibrateTapSeen(context: Context) {
+    val vibrator = context.getSystemService(Vibrator::class.java) ?: return
+    vibrator.vibrate(VibrationEffect.createOneShot(25, 120))
+}
+
 fun vibrateGestureRecognized(context: Context) {
     val vibrator = context.getSystemService(Vibrator::class.java) ?: return
     vibrator.vibrate(VibrationEffect.createOneShot(70, VibrationEffect.DEFAULT_AMPLITUDE))

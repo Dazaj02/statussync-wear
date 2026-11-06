@@ -28,7 +28,9 @@ class SensorRecorder(private val context: Context) : SensorEventListener {
         val accelerometer = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return false
         rows.clear()
         detections = 0
-        live = if (liveDetection) PinchDetector() else null
+        live = if (liveDetection) {
+            PinchDetector(onReject = { timeMs, reason -> rows.add("${timeMs * 1_000_000L},r_$reason,0,0,0") })
+        } else null
         recording = true
         manager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST)
         manager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
