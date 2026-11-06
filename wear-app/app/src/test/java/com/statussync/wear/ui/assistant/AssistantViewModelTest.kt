@@ -59,7 +59,7 @@ class AssistantViewModelTest {
     private var gestureStarts = 0
     private var gestureStops = 0
     private val gestureSource = object : GestureSource {
-        override fun start(onGesture: (Gesture) -> Unit) { gestureStarts++ }
+        override fun start(onGesture: (Gesture) -> Unit, shakeAndTwist: Boolean, pinch: Boolean) { gestureStarts++ }
         override fun stop() { gestureStops++ }
     }
 
@@ -168,11 +168,11 @@ class AssistantViewModelTest {
     }
 
     @Test
-    fun doubleShakeStartsFocusFromFreeAndCanBeUndone() = runTest(dispatcher) {
+    fun doublePinchStartsFocusFromFreeAndCanBeUndone() = runTest(dispatcher) {
         val vm = viewModel()
         backgroundScope.launch(dispatcher) { vm.uiState.collect {} }
 
-        vm.onGesture(Gesture.DoubleShake)
+        vm.onGesture(Gesture.DoublePinch)
 
         assertEquals(AvailabilityState.Focus, status.status.value.state)
         assertEquals(AvailabilityState.Focus, vm.uiState.value.undo?.state)
@@ -183,24 +183,25 @@ class AssistantViewModelTest {
     }
 
     @Test
-    fun doubleShakeNeverOverridesARunningStatus() = runTest(dispatcher) {
+    fun doublePinchWhileBusyGoesBackToFree() = runTest(dispatcher) {
         status.setState(AvailabilityState.Call, Duration.ofMinutes(20))
         val vm = viewModel()
 
-        vm.onGesture(Gesture.DoubleShake)
+        vm.onGesture(Gesture.DoublePinch)
 
-        assertEquals(AvailabilityState.Call, status.status.value.state)
+        assertEquals(AvailabilityState.Free, status.status.value.state)
     }
 
     @Test
-    fun wristTwistOnlyAsksToOpenThePicker() = runTest(dispatcher) {
+    fun doubleShakeAndWristTwistOnlyAskToOpenThePicker() = runTest(dispatcher) {
         val vm = viewModel()
-        var event: GestureEvent? = null
-        backgroundScope.launch(dispatcher) { event = vm.gestureEvents.first() }
+        val events = mutableListOf<GestureEvent>()
+        backgroundScope.launch(dispatcher) { vm.gestureEvents.collect { events += it } }
 
+        vm.onGesture(Gesture.DoubleShake)
         vm.onGesture(Gesture.WristTwist)
 
-        assertEquals(GestureEvent.OpenPicker, event)
+        assertEquals(listOf(GestureEvent.OpenPicker, GestureEvent.OpenPicker), events)
         assertEquals(AvailabilityState.Free, status.status.value.state)
     }
 
@@ -209,15 +210,30 @@ class AssistantViewModelTest {
         val vm = viewModel()
 
         vm.resumeGestures()
-        assertEquals(0, gestureStarts)
+        assertEquals(0, gestureStarts) // todo apagado: no escucha
 
         vm.setGestures(true)
         vm.resumeGestures()
         assertEquals(2, gestureStarts)
 
+        val stopsBefore = gestureStops
         vm.pause()
-        assertEquals(1, gestureStops)
+        assertEquals(stopsBefore + 1, gestureStops)
+
         vm.setGestures(false)
-        assertEquals(2, gestureStops)
+        assertEquals(stopsBefore + 2, gestureStops) // sin ningún gesto activo suelta los sensores
+    }
+
+    @Test
+    fun pinchRunsAloneAndDoublePinchStartsFocus() = runTest(dispatcher) {
+        val vm = viewModel()
+        backgroundScope.launch(dispatcher) { vm.uiState.collect {} }
+
+        vm.setPinch(true)
+        assertEquals(1, gestureStarts)
+
+        vm.onGesture(Gesture.DoublePinch)
+
+        assertEquals(AvailabilityState.Focus, status.status.value.state)
     }
 }

@@ -37,7 +37,7 @@ data class AssistantUiState(
 )
 
 /** Avisos de un gesto reconocido para que la UI vibre o abra el selector. */
-enum class GestureEvent { FocusStarted, OpenPicker }
+enum class GestureEvent { StateToggled, OpenPicker }
 
 class AssistantViewModel(
     private val statusRepository: StatusRepository,
@@ -126,45 +126,59 @@ class AssistantViewModel(
 
     fun setGestures(enabled: Boolean) {
         settingsRepository.update { it.copy(gestures = enabled) }
-        if (enabled) gestures.start(::onGesture) else gestures.stop()
+        resumeGestures()
     }
 
-    /** La app pasa a estar visible: escucha los gestos si están activados. */
+    fun setPinch(enabled: Boolean) {
+        settingsRepository.update { it.copy(pinch = enabled) }
+        resumeGestures()
+    }
+
+    /** La app pasa a estar visible (o cambió un interruptor): escucha los gestos activados y suelta los demás. */
     fun resumeGestures() {
-        if (settingsRepository.settings.value.gestures) gestures.start(::onGesture)
+        val s = settingsRepository.settings.value
+        if (s.gestures || s.pinch) gestures.start(::onGesture, shakeAndTwist = s.gestures, pinch = s.pinch) else gestures.stop()
     }
 
     /**
-     * Doble sacudida: de Libre a Enfoque (no pisa un bloque en curso), con deshacer.
-     * Giro de muñeca: pide abrir el selector. Un cambio manual posterior siempre gana.
+     * Dos pellizcos: Libre pasa a Enfoque (con deshacer) y cualquier otro estado vuelve a Libre.
+     * Doble sacudida o giro de muñeca: abren el selector para elegir un estado o crear uno.
+     * Un cambio manual posterior siempre gana.
      */
     fun onGesture(gesture: Gesture) {
         when (gesture) {
-            Gesture.DoubleShake -> {
-                statusRepository.expireIfDue()
-                val current = statusRepository.status.value
-                if (current.state != AvailabilityState.Free) return
-                val minutes = AvailabilityState.Focus.quickDurationMin ?: return
-                statusBeforeAuto = current
-                statusRepository.setState(AvailabilityState.Focus, Duration.ofMinutes(minutes.toLong()))
-                undo.value = Suggestion(
-                    key = "gesture-focus",
-                    state = AvailabilityState.Focus,
-                    durationMin = minutes,
-                    confidence = 1f,
-                    reason = SuggestionReason.Gesture,
-                    source = SuggestionSource.Motion,
-                    dismissFor = Duration.ZERO,
-                )
-                _gestureEvents.tryEmit(GestureEvent.FocusStarted)
-            }
-            Gesture.WristTwist -> _gestureEvents.tryEmit(GestureEvent.OpenPicker)
+            Gesture.DoublePinch -> toggleFocus()
+            Gesture.DoubleShake, Gesture.WristTwist -> _gestureEvents.tryEmit(GestureEvent.OpenPicker)
         }
+    }
+
+    private fun toggleFocus() {
+        statusRepository.expireIfDue()
+        val current = statusRepository.status.value
+        if (current.state != AvailabilityState.Free) {
+            statusRepository.setState(AvailabilityState.Free)
+            undo.value = null
+            _gestureEvents.tryEmit(GestureEvent.StateToggled)
+            return
+        }
+        val minutes = AvailabilityState.Focus.quickDurationMin ?: return
+        statusBeforeAuto = current
+        statusRepository.setState(AvailabilityState.Focus, Duration.ofMinutes(minutes.toLong()))
+        undo.value = Suggestion(
+            key = "gesture-focus",
+            state = AvailabilityState.Focus,
+            durationMin = minutes,
+            confidence = 1f,
+            reason = SuggestionReason.Gesture,
+            source = SuggestionSource.Motion,
+            dismissFor = Duration.ZERO,
+        )
+        _gestureEvents.tryEmit(GestureEvent.StateToggled)
     }
 
     fun simulateShake() = onGesture(Gesture.DoubleShake)
 
-    fun simulateTwist() = onGesture(Gesture.WristTwist)
+    fun simulatePinch() = onGesture(Gesture.DoublePinch)
 
     fun simulateClass() {
         simulation.simulateClass()

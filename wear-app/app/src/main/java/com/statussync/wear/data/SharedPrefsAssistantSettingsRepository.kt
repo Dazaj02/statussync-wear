@@ -12,6 +12,7 @@ class SharedPrefsAssistantSettingsRepository(
         motion = prefs.getBoolean(MOTION, false),
         autoApply = prefs.getBoolean(AUTO, false),
         gestures = prefs.getBoolean(GESTURES, false),
+        pinch = prefs.getBoolean(PINCH, false),
     ),
 ) {
     override fun onChanged(settings: AssistantSettings) {
@@ -20,6 +21,7 @@ class SharedPrefsAssistantSettingsRepository(
             .putBoolean(MOTION, settings.motion)
             .putBoolean(AUTO, settings.autoApply)
             .putBoolean(GESTURES, settings.gestures)
+            .putBoolean(PINCH, settings.pinch)
             .apply()
     }
 
@@ -28,5 +30,6 @@ class SharedPrefsAssistantSettingsRepository(
         const val MOTION = "assistant_motion"
         const val AUTO = "assistant_auto"
         const val GESTURES = "assistant_gestures"
+        const val PINCH = "assistant_pinch"
     }
 }

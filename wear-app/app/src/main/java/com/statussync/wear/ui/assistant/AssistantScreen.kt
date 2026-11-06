@@ -39,10 +39,11 @@ fun AssistantScreen(
     onMotion: (Boolean) -> Unit,
     onAuto: (Boolean) -> Unit,
     onGestures: (Boolean) -> Unit,
+    onPinch: (Boolean) -> Unit,
     onSimulateClass: () -> Unit,
     onSimulateStillness: () -> Unit,
     onSimulateShake: () -> Unit,
-    onSimulateTwist: () -> Unit,
+    onSimulatePinch: () -> Unit,
     onSensorLab: () -> Unit,
 ) {
     ScalingLazyColumn(
@@ -71,6 +72,7 @@ fun AssistantScreen(
         item { Toggle(R.string.assistant_calendar, R.string.assistant_calendar_hint, ui.settings.calendar, onCalendar) }
         item { Toggle(R.string.assistant_motion, R.string.assistant_motion_hint, ui.settings.motion, onMotion) }
         item { Toggle(R.string.assistant_gestures, R.string.assistant_gestures_hint, ui.settings.gestures, onGestures) }
+        item { Toggle(R.string.assistant_pinch, R.string.assistant_pinch_hint, ui.settings.pinch, onPinch) }
         item { Toggle(R.string.assistant_auto, R.string.assistant_auto_hint, ui.settings.autoApply, onAuto) }
         item {
             Text(
@@ -84,7 +86,7 @@ fun AssistantScreen(
         item { SimulateButton(stringResource(R.string.assistant_simulate_class), onSimulateClass) }
         item { SimulateButton(stringResource(R.string.assistant_simulate_still), onSimulateStillness) }
         item { SimulateButton(stringResource(R.string.assistant_simulate_shake), onSimulateShake) }
-        item { SimulateButton(stringResource(R.string.assistant_simulate_twist), onSimulateTwist) }
+        item { SimulateButton(stringResource(R.string.assistant_simulate_pinch), onSimulatePinch) }
         item { SimulateButton(stringResource(R.string.assistant_sensor_lab), onSensorLab) }
     }
 }

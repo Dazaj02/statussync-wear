@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import com.statussync.wear.domain.PinchDetector
 import java.io.File
 
 /**
@@ -16,11 +17,18 @@ class SensorRecorder(private val context: Context) : SensorEventListener {
     private val sensorManager = context.getSystemService(SensorManager::class.java)
     private val rows = ArrayList<String>(60_000)
     private var recording = false
+    private var live: PinchDetector? = null
 
-    fun start(): Boolean {
+    /** Pellizcos que el detector real marcó durante la grabación en vivo. */
+    @Volatile var detections = 0
+        private set
+
+    fun start(liveDetection: Boolean = false): Boolean {
         val manager = sensorManager ?: return false
         val accelerometer = manager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) ?: return false
         rows.clear()
+        detections = 0
+        live = if (liveDetection) PinchDetector() else null
         recording = true
         manager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_FASTEST)
         manager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
@@ -48,8 +56,12 @@ class SensorRecorder(private val context: Context) : SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent) {
         if (!recording) return
-        val sensor = if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) "a" else "g"
-        rows.add("${event.timestamp},$sensor,${event.values[0]},${event.values[1]},${event.values[2]}")
+        val accelerometer = event.sensor.type == Sensor.TYPE_ACCELEROMETER
+        rows.add("${event.timestamp},${if (accelerometer) "a" else "g"},${event.values[0]},${event.values[1]},${event.values[2]}")
+        if (accelerometer && live?.onAccelerometer(event.timestamp / 1_000_000L, event.values[0], event.values[1], event.values[2]) != null) {
+            detections++
+            rows.add("${event.timestamp},d,0,0,0") // marca de detección para el análisis posterior
+        }
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) = Unit

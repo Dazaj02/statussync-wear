@@ -6,21 +6,25 @@ import kotlin.math.sqrt
 
 /** Gestos de muñeca que reconoce el reloj mientras la app está visible. */
 enum class Gesture {
-    /** Dos sacudidas seguidas: Libre pasa a Enfoque. */
+    /** Dos sacudidas seguidas: abre el selector de estado. */
     DoubleShake,
 
     /** Giro de muñeca sobre el eje del antebrazo: abre el selector de estado. */
     WristTwist,
+
+    /** Dos pellizcos índice-pulgar con la mano quieta (experimental): alterna Libre y Enfoque. */
+    DoublePinch,
 }
 
 /** Origen de gestos. Se suelta al salir de la app para no gastar batería. */
 interface GestureSource {
-    fun start(onGesture: (Gesture) -> Unit)
+    /** `shakeAndTwist` activa sacudida y giro; `pinch` activa el pellizco (necesita más frecuencia de muestreo). */
+    fun start(onGesture: (Gesture) -> Unit, shakeAndTwist: Boolean, pinch: Boolean)
 
     fun stop()
 
     object None : GestureSource {
-        override fun start(onGesture: (Gesture) -> Unit) = Unit
+        override fun start(onGesture: (Gesture) -> Unit, shakeAndTwist: Boolean, pinch: Boolean) = Unit
         override fun stop() = Unit
     }
 }

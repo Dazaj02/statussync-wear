@@ -164,11 +164,26 @@ fun StatusSyncRoot(
         }
     }
 
+    fun pickCustom(custom: CustomState) {
+        if (custom.hasTimer) {
+            route = Route.PickDuration(
+                baseLabelRes = null,
+                customName = custom.name,
+                color = Color(custom.colorArgb),
+                optionsMin = custom.durationsMin,
+                onStart = { min -> viewModel.selectCustom(custom, Duration.ofMinutes(min.toLong())); goHome() },
+            )
+        } else {
+            viewModel.selectCustom(custom)
+            goHome()
+        }
+    }
+
     LaunchedEffect(Unit) {
         assistantViewModel.gestureEvents.collect { event ->
             vibrateGestureRecognized(context)
             when (event) {
-                GestureEvent.FocusStarted -> route = Route.Home
+                GestureEvent.StateToggled -> route = Route.Home
                 GestureEvent.OpenPicker -> route = Route.PickState
             }
         }
@@ -188,19 +203,7 @@ fun StatusSyncRoot(
                     onStart = { min -> viewModel.select(state, Duration.ofMinutes(min.toLong())); goHome() },
                 )
             },
-            onPickCustom = { custom ->
-                if (custom.hasTimer) {
-                    route = Route.PickDuration(
-                        baseLabelRes = null,
-                        customName = custom.name,
-                        color = Color(custom.colorArgb),
-                        optionsMin = custom.durationsMin,
-                        onStart = { min -> viewModel.selectCustom(custom, Duration.ofMinutes(min.toLong())); goHome() },
-                    )
-                } else {
-                    viewModel.selectCustom(custom)
-                }
-            },
+            onPickCustom = ::pickCustom,
             onAdd = { route = Route.AddName },
             onRemove = { route = Route.Manage },
             onGroup = { route = Route.Group },
@@ -223,10 +226,11 @@ fun StatusSyncRoot(
             },
             onAuto = assistantViewModel::setAutoApply,
             onGestures = assistantViewModel::setGestures,
+            onPinch = assistantViewModel::setPinch,
             onSimulateClass = assistantViewModel::simulateClass,
             onSimulateStillness = assistantViewModel::simulateStillness,
             onSimulateShake = assistantViewModel::simulateShake,
-            onSimulateTwist = assistantViewModel::simulateTwist,
+            onSimulatePinch = assistantViewModel::simulatePinch,
             onSensorLab = { route = Route.SensorLab },
         )
 
@@ -236,8 +240,17 @@ fun StatusSyncRoot(
             title = stringResource(R.string.gesture_pick_title),
             choices = AvailabilityState.entries.map {
                 Choice(it.wireName, stringResource(it.labelRes), it.color(), onColorFor(it.color()))
+            } + customStates.map {
+                Choice("custom:${it.id}", it.name, Color(it.colorArgb), onColorFor(Color(it.colorArgb)))
+            } + Choice("add", stringResource(R.string.action_add_state)),
+            onPick = { picked ->
+                when {
+                    picked.key == "add" -> route = Route.AddName
+                    picked.key.startsWith("custom:") ->
+                        customStates.firstOrNull { "custom:${it.id}" == picked.key }?.let(::pickCustom)
+                    else -> pickBase(AvailabilityState.fromWire(picked.key) ?: AvailabilityState.Free)
+                }
             },
-            onPick = { pickBase(AvailabilityState.fromWire(it.key) ?: AvailabilityState.Free) },
         )
 
         Route.Group -> GroupScreen(groupViewModel.uiState.collectAsStateWithLifecycle().value)

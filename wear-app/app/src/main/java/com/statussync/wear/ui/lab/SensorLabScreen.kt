@@ -26,13 +26,14 @@ import com.statussync.wear.data.SensorRecorder
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private data class Session(val label: String, val seconds: Int, val buttonRes: Int, val hintRes: Int)
+private data class Session(val label: String, val seconds: Int, val buttonRes: Int, val hintRes: Int, val live: Boolean = false)
 
 private val SESSIONS = listOf(
     Session("reposo", 15, R.string.lab_rest, R.string.lab_rest_hint),
     Session("pellizco2", 20, R.string.lab_pinch2, R.string.lab_pinch_hint),
     Session("pellizco3", 20, R.string.lab_pinch3, R.string.lab_pinch_hint),
     Session("caminar", 15, R.string.lab_walk, R.string.lab_walk_hint),
+    Session("vivo", 30, R.string.lab_live, R.string.lab_live_hint, live = true),
 )
 
 /** Pantalla de pruebas: graba sensores 15–20 s mientras haces cada movimiento. No forma parte del uso normal. */
@@ -55,6 +56,7 @@ fun SensorLabScreen(recorder: SensorRecorder) {
 
     val getReady = stringResource(R.string.lab_get_ready)
     val recordingFormat = stringResource(R.string.lab_recording_format)
+    val liveFormat = stringResource(R.string.lab_live_format)
     val doneFormat = stringResource(R.string.lab_done_format)
     val noSensor = stringResource(R.string.lab_no_sensor)
 
@@ -66,13 +68,13 @@ fun SensorLabScreen(recorder: SensorRecorder) {
                 message = getReady.format(i)
                 delay(1_000)
             }
-            if (!recorder.start()) {
+            if (!recorder.start(session.live)) {
                 message = noSensor
                 busy = false
                 return@launch
             }
             for (s in session.seconds downTo 1) {
-                message = recordingFormat.format(s)
+                message = if (session.live) liveFormat.format(s, recorder.detections) else recordingFormat.format(s)
                 delay(1_000)
             }
             message = doneFormat.format(recorder.stop(session.label))

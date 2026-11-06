@@ -44,6 +44,8 @@ data class AssistantSettings(
     val autoApply: Boolean = false,
     /** Sacudir la muñeca dos veces pasa de Libre a Enfoque; girarla abre el selector. */
     val gestures: Boolean = false,
+    /** Experimental: dos pellizcos índice-pulgar. Solo detecta bien con la mano quieta. */
+    val pinch: Boolean = false,
 )
 
 interface AssistantSettingsRepository {

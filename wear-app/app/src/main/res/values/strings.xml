@@ -37,9 +37,11 @@
     <string name="assistant_auto">Auto-cambio</string>
     <string name="assistant_auto_hint">Cambia solo y puedes deshacer</string>
     <string name="assistant_gestures">Gestos</string>
-    <string name="assistant_gestures_hint">Sacude 2 veces: Enfoque. Gira la muñeca: elegir</string>
+    <string name="assistant_gestures_hint">Sacude 2 veces o gira la muñeca: elegir o crear estado</string>
+    <string name="assistant_pinch">Pellizco (experimental)</string>
+    <string name="assistant_pinch_hint">2 pellizcos con la mano quieta: Libre ⇄ Enfoque</string>
     <string name="assistant_simulate_shake">Simular sacudida</string>
-    <string name="assistant_simulate_twist">Simular giro</string>
+    <string name="assistant_simulate_pinch">Simular 2 pellizcos</string>
     <string name="assistant_sensor_lab">Laboratorio de sensores</string>
     <string name="lab_title">Laboratorio</string>
     <string name="lab_intro">Graba tus sensores para estudiar el pellizco</string>
@@ -52,6 +54,9 @@
     <string name="lab_pinch2">2 pellizcos · 20 s</string>
     <string name="lab_pinch3">3 pellizcos · 20 s</string>
     <string name="lab_pinch_hint">Junta índice y pulgar y suelta. Repite a tu ritmo, con 1 s de pausa entre series</string>
+    <string name="lab_live">Pellizco en vivo · 30 s</string>
+    <string name="lab_live_hint">Haz 2 pellizcos, espera 2 s y repite. Cuento los que detecto</string>
+    <string name="lab_live_format">%1$d s · detectados: %2$d</string>
     <string name="lab_walk">Caminar · 15 s</string>
     <string name="lab_walk_hint">Camina o mueve el brazo normal</string>
     <string name="gesture_pick_title">¿Qué estado?</string>
